@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UL 1778 / 60950-1 安規絕緣間距快速查詢工具 (SOP v10)</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Google Fonts: Inter 與 Noto Sans TC -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- 頂部導覽列 -->
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2 rounded-lg">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold tracking-tight">安規絕緣間距快速查詢工具</h1>
+                    <p class="text-xs text-slate-400">UL 1778 5th / UL 60950-1 2nd (SOP v10 規範)</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="resetDefaults()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5 cursor-pointer">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    重設預設值
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主內容區 -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- 左側：參數設定面板 (佔 5 欄) -->
+            <section class="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-5">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <span class="w-2 h-5 bg-blue-600 rounded-full"></span>
+                        1. 輸入評估參數
+                    </h2>
+                    <span class="text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">即時自動計算</span>
+                </div>
+
+                <!-- 電路類型 (預設一次電路，隱藏二次電路選項) -->
+                <div class="hidden">
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">電路類型 (Circuit Type)</label>
+                    <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                        <button type="button" id="btn-primary" onclick="setCircuitType('primary')" class="py-2 px-3 rounded-lg text-sm font-semibold transition shadow-sm bg-white text-blue-700 cursor-pointer">
+                            一次電路 (Primary)
+                        </button>
+                        <button type="button" id="btn-secondary" onclick="setCircuitType('secondary')" class="py-2 px-3 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer">
+                            二次電路 (Secondary)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 一次電路專屬設定：AC 市電與過電壓類別 -->
+                <div id="primary-settings" class="space-y-4 bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80">
+                    <!-- 單相 / 三相選擇 -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">交流電源相數 (Phase System)</label>
+                        <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-200/70 rounded-lg">
+                            <button type="button" id="btn-phase-1" onclick="setPhaseType('single')" class="py-1.5 px-2.5 rounded-md text-xs font-semibold transition shadow-sm bg-white text-blue-700 cursor-pointer">
+                                單相電 (Single-Phase)
+                            </button>
+                            <button type="button" id="btn-phase-3" onclick="setPhaseType('three')" class="py-1.5 px-2.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer">
+                                三相電 (Three-Phase)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 單相電輸入欄位 -->
+                    <div id="single-phase-input">
+                        <div class="flex justify-between items-center mb-1">
+                            <label for="ac-mains" class="text-xs font-semibold text-slate-700">交流市電額定電壓 AC Mains (Vrms)</label>
+                            <span id="mains-peak-badge" class="text-[11px] font-mono bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">峰值: 325.3 Vpk</span>
+                        </div>
+                        <input type="number" id="ac-mains" value="230" min="1" max="600" step="1" oninput="calculate()" placeholder="請輸入單相額定電壓 (Vrms)" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    </div>
+
+                    <!-- 三相電下拉選單 -->
+                    <div id="three-phase-input" class="hidden">
+                        <div class="flex justify-between items-center mb-1">
+                            <label for="ac-mains-3p" class="text-xs font-semibold text-slate-700">三相電源系統 (AC Mains System)</label>
+                            <span id="mains-peak-badge-3p" class="text-[11px] font-mono bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">計算基準: 230V / 峰值 325.3V</span>
+                        </div>
+                        <select id="ac-mains-3p" onchange="calculate()" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm font-semibold bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="120/208">120/208 V (三相四線 Wye — 對中性線 120V)</option>
+                            <option value="120/240">120/240 V (三相四線 Delta High-leg — 相間線電壓 240V)</option>
+                            <option value="230/400" selected>230/400 V (三相四線 Wye — 對中性線 230V)</option>
+                            <option value="277/480">277/480 V (三相四線 Wye — 對中性線 277V)</option>
+                            <option value="400/690">400/690 V (三相四線 Wye — 對中性線 400V)</option>
+                        </select>
+                        <p id="three-phase-rule-hint" class="text-[11px] text-slate-500 mt-1">依 SOP v10：Wye 系統以相對中性線電壓 (230V) 查詢 Table 2K。</p>
+                    </div>
+
+                    <div>
+                        <label for="ov-cat" class="block text-xs font-semibold text-slate-700 mb-1">過電壓類別 (Overvoltage Category - Table G.1)</label>
+                        <select id="ov-cat" onchange="calculate()" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="1">Category I (特殊保護設備)</option>
+                            <option value="2" selected>Category II (一般插電式 UPS 預設)</option>
+                            <option value="3">Category III (配電盤/固定式設備)</option>
+                            <option value="4">Category IV (建築物進線端)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 二次電路專屬設定：瞬態電壓範圍 -->
+                <div id="secondary-settings" class="hidden space-y-3 bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80">
+                    <div>
+                        <label for="sec-transient" class="block text-xs font-semibold text-slate-700 mb-1">二次電路最高瞬態過電壓 (Table 2M)</label>
+                        <select id="sec-transient" onchange="calculate()" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="71">≤ 71 V peak</option>
+                            <option value="800">&gt; 71 V ~ 800 V peak</option>
+                            <option value="1500" selected>&gt; 800 V ~ 1500 V peak (預設降一階)</option>
+                            <option value="2500">&gt; 1500 V ~ 2500 V peak</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 實測工作電壓 -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="u-pk" class="block text-xs font-semibold text-slate-700 mb-1">峰值工作電壓 (Vpk)</label>
+                        <input type="number" id="u-pk" value="325" min="0" step="1" oninput="calculate()" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <p class="text-[11px] text-slate-400 mt-1">決定空間間距 (Cl)</p>
+                    </div>
+                    <div>
+                        <label for="u-rms" class="block text-xs font-semibold text-slate-700 mb-1">均方根電壓 (Vrms)</label>
+                        <input type="number" id="u-rms" value="230" min="0" step="1" oninput="calculate()" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <p class="text-[11px] text-slate-400 mt-1">決定沿面距離 (Dcr)</p>
+                    </div>
+                </div>
+
+                <!-- 海拔高度 (預設 3000m) -->
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label for="altitude" class="text-xs font-semibold text-slate-700">操作海拔高度 Altitude (m)</label>
+                        <span id="alt-factor-badge" class="text-[11px] font-mono bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded">倍率: 1.14x</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="number" id="altitude" value="3000" min="0" max="20000" step="100" oninput="calculate()" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm font-bold text-blue-700 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <div class="flex gap-1">
+                            <button type="button" onclick="setAltitude(2000)" class="px-2.5 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-200 cursor-pointer">2000m</button>
+                            <button type="button" onclick="setAltitude(3000)" class="px-2.5 py-1.5 text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 cursor-pointer">3000m</button>
+                            <button type="button" onclick="setAltitude(5000)" class="px-2.5 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-200 cursor-pointer">5000m</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 污染等級與材料組別 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label for="pollution-degree" class="block text-xs font-semibold text-slate-700 mb-1">污染等級 (Pollution Degree)</label>
+                        <select id="pollution-degree" onchange="calculate()" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="1">PD 1 (密閉/無污染)</option>
+                            <option value="2" selected>PD 2 (一般 UPS 預設)</option>
+                            <option value="3">PD 3 (導電性污染/高濕)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="material-group" class="block text-xs font-semibold text-slate-700 mb-1">材料組別 (Material / CTI)</label>
+                        <select id="material-group" onchange="calculate()" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="PCB">PCB 裸板 (僅適用 PD2)</option>
+                            <option value="I">Group I (CTI ≥ 600)</option>
+                            <option value="II">Group II (400 ≤ CTI &lt; 600)</option>
+                            <option value="IIIa">Group IIIa (175 ≤ CTI &lt; 400)</option>
+                            <option value="IIIb" selected>Group IIIb (預設 / 未知 CTI)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 特殊工廠/製程條件 (已依需求隱藏) -->
+                <div class="hidden pt-2 border-t border-slate-100 space-y-2">
+                    <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                        <input type="checkbox" id="qc-program" onchange="calculate()" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                        <span class="text-xs text-slate-700">具備合格品質控制計畫 (Annex R.2 括弧減免值)</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                        <input type="checkbox" id="coated-pcb" onchange="calculate()" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                        <span class="text-xs text-slate-700">符合 UL 746C 防潮塗層 PCB (Table 2Q 評估)</span>
+                    </label>
+                </div>
+            </section>
+
+            <!-- 右側：查詢結果與判定邏輯拆解 (佔 7 欄) -->
+            <section class="lg:col-span-7 space-y-6">
+
+                <!-- 卡片 1：最終間距查詢結果 (基本 / 功能 / 強化絕緣) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 mb-4">
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <span class="w-2 h-5 bg-emerald-500 rounded-full"></span>
+                            2. 最小絕緣間距查詢結果 (mm)
+                        </h2>
+                        <div class="flex items-center gap-2">
+                            <span id="summary-badge" class="text-xs font-medium bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md border border-slate-200">
+                                瞬態: 2500V | 海拔: 3000m (1.14x)
+                            </span>
+                            <button onclick="copyResultText()" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium px-2.5 py-1 rounded-md border border-blue-200 transition cursor-pointer">
+                                複製結果
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 三大絕緣等級並排卡片 -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- 功能絕緣 Functional -->
+                        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-4 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Functional</span>
+                                    <span class="text-[11px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-medium">功能絕緣</span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 mb-3">僅維持正常功能，無防電擊要求</p>
+                            </div>
+                            <div class="space-y-2.5 pt-2 border-t border-slate-200/80">
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-xs text-slate-600 font-medium">空間間距 (Cl)</span>
+                                    <span id="res-func-cl" class="text-2xl font-bold font-mono text-slate-800">2.3 <span class="text-xs font-normal text-slate-500">mm</span></span>
+                                </div>
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-xs text-slate-600 font-medium">沿面距離 (Dcr)</span>
+                                    <span id="res-func-dcr" class="text-2xl font-bold font-mono text-slate-800">2.4 <span class="text-xs font-normal text-slate-500">mm</span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 基本 / 補充絕緣 Basic / Supplementary -->
+                        <div class="rounded-xl border-2 border-blue-500/30 bg-blue-50/40 p-4 flex flex-col justify-between relative">
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-blue-700">Basic / Supp.</span>
+                                    <span class="text-[11px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-semibold">基本 / 補充絕緣</span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 mb-3">提供單層防電擊基本保護</p>
+                            </div>
+                            <div class="space-y-2.5 pt-2 border-t border-blue-200/60">
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-xs text-slate-700 font-medium">空間間距 (Cl)</span>
+                                    <span id="res-basic-cl" class="text-2xl font-bold font-mono text-blue-700">2.3 <span class="text-xs font-normal text-blue-500">mm</span></span>
+                                </div>
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-xs text-slate-700 font-medium">沿面距離 (Dcr)</span>
+                                    <span id="res-basic-dcr" class="text-2xl font-bold font-mono text-blue-700">2.4 <span class="text-xs font-normal text-blue-500">mm</span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 強化 / 雙重絕緣 Reinforced -->
+                        <div class="rounded-xl border-2 border-amber-500/40 bg-amber-50/40 p-4 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-amber-800">Reinforced</span>
+                                    <span class="text-[11px] bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-semibold">強化 / 雙重絕緣</span>
+                                </div>
+                                <p class="text-[11px] text-slate-500 mb-3">一次側對 SELV/可觸及表面</p>
+                            </div>
+                            <div class="space-y-2.5 pt-2 border-t border-amber-200/60">
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-xs text-slate-700 font-medium">空間間距 (Cl)</span>
+                                    <span id="res-reinf-cl" class="text-2xl font-bold font-mono text-amber-800">4.6 <span class="text-xs font-normal text-amber-600">mm</span></span>
+                                </div>
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-xs text-slate-700 font-medium">沿面距離 (Dcr)</span>
+                                    <span id="res-reinf-dcr" class="text-2xl font-bold font-mono text-amber-800">4.8 <span class="text-xs font-normal text-amber-600">mm</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 提示訊息欄 (例如警告或特殊規則觸發) -->
+                    <div id="alert-box" class="hidden mt-4 p-3 rounded-xl text-xs flex items-start gap-2"></div>
+                </div>
+
+                <!-- 卡片 2：判定過程與邏輯拆解 -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <span class="w-2 h-5 bg-indigo-500 rounded-full"></span>
+                            3. 判定過程與邏輯拆解 (SOP v10 Step-by-Step)
+                        </h2>
+                        <span class="text-xs text-slate-400">依 UL 1778 / 60950-1 條款自動推導</span>
+                    </div>
+
+                    <div id="logic-breakdown" class="space-y-3 text-sm text-slate-700 leading-relaxed">
+                        <!-- 由 JavaScript 動態產生判定步驟 -->
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+    <!-- 頁尾 -->
+    <footer class="bg-white border-t border-slate-200 mt-10 py-4 text-center text-xs text-slate-500">
+        依據 UL 1778 5th / UL 60950-1 2nd / IEC 60664-1 安規標準作業程序 (SOP v10) 建置 • 僅供工程設計快速查詢參考
+    </footer>
+
+    <!-- 訊息提示框 (Toast) -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg opacity-0 pointer-events-none transition-opacity duration-300 flex items-center gap-2 z-50">
+        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        <span id="toast-msg">已複製查詢結果至剪貼簿</span>
+    </div>
+
+    <script>
+        // =========================================================================
+        // 1. SOP v8 標準數據表定義 (Table G.1, 2K, 2L, 2M, A.2, 2N, 2Q, G.2)
+        // =========================================================================
+
+        // Table 2K: Minimum Clearances in Primary Circuits (SOP v8 完整對照表, mm)
+        // 結構: [電壓上限, 1500_pd12_F, 1500_pd12_BS, 1500_pd12_BS_qc, 1500_pd12_R, 1500_pd12_R_qc,
+        //                  1500_pd3_F,  1500_pd3_BS,  1500_pd3_BS_qc,  1500_pd3_R,  1500_pd3_R_qc,
+        //                  2500_pd12_F, 2500_pd12_BS, 2500_pd12_BS_qc, 2500_pd12_R, 2500_pd12_R_qc,
+        //                  2500_pd3_F,  2500_pd3_BS,  2500_pd3_BS_qc,  2500_pd3_R,  2500_pd3_R_qc,
+        //                  4000_F,      4000_BS,      4000_BS_qc,      4000_R,      4000_R_qc]
+        const TABLE_2K = [
+            [71,    0.4, 1.0, 0.5, 2.0, 1.0,   0.8, 1.3, 0.8, 2.6, 1.6,   1.0, 2.0, 1.5, 4.0, 3.0,   1.3, 2.0, 1.5, 4.0, 3.0,   2.0, 3.2, 3.0, 6.4, 6.0],
+            [210,   0.5, 1.0, 0.5, 2.0, 1.0,   0.8, 1.3, 0.8, 2.6, 1.6,   1.4, 2.0, 1.5, 4.0, 3.0,   1.5, 2.0, 1.5, 4.0, 3.0,   2.0, 3.2, 3.0, 6.4, 6.0],
+            [420,   1.5, 1.5, 1.5, 3.0, 3.0,   1.5, 1.5, 1.5, 3.0, 3.0,   1.5, 2.0, 1.5, 4.0, 3.0,   1.5, 2.0, 1.5, 4.0, 3.0,   2.5, 3.2, 3.0, 6.4, 6.0],
+            [840,   3.0, 3.0, 3.0, 6.0, 6.0,   3.0, 3.0, 3.0, 6.0, 6.0,   3.0, 3.2, 3.0, 6.4, 6.0,   3.0, 3.2, 3.0, 6.4, 6.0,   3.0, 3.2, 3.0, 6.4, 6.0],
+            [1400,  4.2, 4.2, 4.2, 6.4, 6.4,   4.2, 4.2, 4.2, 6.4, 6.4,   4.2, 4.2, 4.2, 6.4, 6.4,   4.2, 4.2, 4.2, 6.4, 6.4,   4.2, 4.2, 4.2, 6.4, 6.4],
+            [2800,  8.4, 8.4, 8.4, 8.4, 8.4,   8.4, 8.4, 8.4, 8.4, 8.4,   8.4, 8.4, 8.4, 8.4, 8.4,   8.4, 8.4, 8.4, 8.4, 8.4,   8.4, 8.4, 8.4, 8.4, 8.4],
+            [7000,  17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5, 17.5],
+            [9800,  25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0],
+            [14000, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0, 37.0],
+            [28000, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0, 80.0],
+            [42000, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0, 130.0]
+        ];
+
+        // Table G.2: Annex G Minimum Clearances (針對瞬態 > 4000V, kV 對應 mm)
+        const TABLE_G2 = [
+            [400,   0.1, 0.2, 0.8,   0.2, 0.4, 1.6],
+            [800,   0.2, 0.2, 0.8,   0.4, 0.4, 1.6],
+            [1000,  0.2, 0.3, 0.8,   0.4, 0.6, 1.6],
+            [1200,  0.3, 0.4, 0.8,   0.6, 0.8, 1.6],
+            [1500,  0.5, 0.5, 0.8,   1.0, 1.0, 1.6],
+            [2000,  1.0, 1.0, 1.3,   2.0, 2.0, 2.6],
+            [2500,  1.5, 1.5, 1.5,   3.0, 3.0, 3.0],
+            [3000,  2.0, 2.0, 2.0,   4.0, 4.0, 5.2],
+            [4000,  3.0, 3.0, 3.0,   6.0, 6.0, 6.0],
+            [6000,  5.5, 5.5, 5.5,  11.0, 11.0, 11.0],
+            [8000,  8.0, 8.0, 8.0,  16.0, 16.0, 16.0],
+            [10000, 11.0, 11.0, 11.0, 22.0, 22.0, 22.0],
+            [12000, 14.0, 14.0, 14.0, 28.0, 28.0, 28.0],
+            [15000, 18.0, 18.0, 18.0, 36.0, 36.0, 36.0],
+            [25000, 33.0, 33.0, 33.0, 66.0, 66.0, 66.0],
+            [40000, 60.0, 60.0, 60.0, 120.0, 120.0, 120.0],
+            [50000, 75.0, 75.0, 75.0, 150.0, 150.0, 150.0],
+            [60000, 90.0, 90.0, 90.0, 180.0, 180.0, 180.0],
+            [80000, 130.0, 130.0, 130.0, 260.0, 260.0, 260.0]
+        ];
+
+        // Table 2L Part 1 (Transient = 1500V): [pd12, pd12_qc, pd3, pd3_qc, add_BS, add_R]
+        const TABLE_2L_1500 = [
+            [210,  210,  210,  210,  0.0, 0.0],
+            [298,  288,  294,  293,  0.1, 0.2],
+            [386,  366,  379,  376,  0.2, 0.4],
+            [474,  444,  463,  459,  0.3, 0.6],
+            [562,  522,  547,  541,  0.4, 0.8],
+            [650,  600,  632,  624,  0.5, 1.0],
+            [738,  678,  715,  707,  0.6, 1.2],
+            [826,  756,  800,  790,  0.7, 1.4],
+            [914,  839,  null, null, 0.8, 1.6],
+            [1002, 912,  null, null, 0.9, 1.8],
+            [1090, 990,  null, null, 1.0, 2.0]
+        ];
+
+        // Table 2L Part 2 (Transient = 2500V): [v_std, v_qc, add_BS, add_R]
+        const TABLE_2L_2500 = [
+            [420,  420,  0.0, 0.0],
+            [493,  497,  0.1, 0.2],
+            [567,  575,  0.2, 0.4],
+            [640,  652,  0.3, 0.6],
+            [713,  729,  0.4, 0.8],
+            [787,  807,  0.5, 1.0],
+            [860,  884,  0.6, 1.2],
+            [933,  961,  0.7, 1.4],
+            [1006, 1039, 0.8, 1.6],
+            [1080, 1116, 0.9, 1.8],
+            [1153, 1193, 1.0, 2.0],
+            [1226, 1271, 1.1, 2.2],
+            [1300, 1348, 1.2, 2.4],
+            [null, 1425, 1.3, 2.6]
+        ];
+
+        // Table 2M: Minimum Clearances in Secondary Circuits (mm)
+        // [Upk上限, <=71_BS, <=71_R, 71~800_BS, 71~800_BS_qc, 71~800_R, 71~800_R_qc, 800~1500_BS, 800~1500_BS_qc, 800~1500_R, 800~1500_R_qc, 1500~2500_BS, 1500~2500_BS_qc, 1500~2500_R, 1500~2500_R_qc]
+        const TABLE_2M = [
+            [71,  0.2, 0.4,  0.4, 0.2, 0.8, 0.4,  1.0, 0.5, 2.0, 1.0,  1.5, 1.5, 3.0, 3.0],
+            [210, 0.2, 0.4,  0.4, 0.2, 0.8, 0.4,  1.0, 0.5, 2.0, 1.0,  2.0, 1.5, 4.0, 3.0],
+            [420, 0.2, 0.4,  0.4, 0.2, 0.8, 0.4,  1.9, 1.0, 3.8, 2.0,  2.0, 1.5, 4.0, 3.0],
+            [700, 2.5, 5.0,  2.5, 2.5, 5.0, 5.0,  2.5, 2.5, 5.0, 5.0,  2.5, 2.5, 5.0, 5.0],
+            [840, 3.2, 5.0,  3.2, 3.2, 5.0, 5.0,  3.2, 3.2, 5.0, 5.0,  3.2, 3.2, 5.0, 5.0]
+        ];
+
+        // Table A.2: IEC 60664-1 Altitude Correction Factors
+        const TABLE_A2 = [
+            [2000,  1.00],
+            [3000,  1.14],
+            [4000,  1.29],
+            [5000,  1.48],
+            [6000,  1.70],
+            [7000,  1.95],
+            [8000,  2.25],
+            [9000,  2.62],
+            [10000, 3.02],
+            [15000, 6.67],
+            [20000, 14.5]
+        ];
+
+        // Table 2N: Minimum Creepage Distances (完整 39 電壓階層, mm)
+        // 欄位: [Urms, PD1_F, PD1_BS, PD2_PCB, PD2_I, PD2_II, PD2_III, PD3_I, PD3_II, PD3_IIIa, PD3_IIIb]
+        const TABLE_2N = [
+            [10,    0.025, 0.08,  0.04,  0.40,  0.40,  0.40,   1.00,   1.00,   1.00,   1.00],
+            [12.5,  0.025, 0.09,  0.04,  0.42,  0.42,  0.42,   1.05,   1.05,   1.05,   1.05],
+            [16,    0.025, 0.10,  0.04,  0.45,  0.45,  0.45,   1.10,   1.10,   1.10,   1.10],
+            [20,    0.025, 0.11,  0.04,  0.48,  0.48,  0.48,   1.20,   1.20,   1.20,   1.20],
+            [25,    0.025, 0.125, 0.04,  0.50,  0.50,  0.50,   1.25,   1.25,   1.25,   1.25],
+            [32,    0.025, 0.14,  0.04,  0.53,  0.53,  0.53,   1.30,   1.30,   1.30,   1.30],
+            [40,    0.025, 0.16,  0.04,  0.56,  0.80,  1.10,   1.40,   1.60,   1.80,   1.80],
+            [50,    0.025, 0.18,  0.04,  0.60,  0.85,  1.20,   1.50,   1.70,   1.90,   1.90],
+            [63,    0.04,  0.20,  0.063, 0.63,  0.90,  1.25,   1.60,   1.80,   2.00,   2.00],
+            [80,    0.063, 0.22,  0.10,  0.67,  0.90,  1.30,   1.70,   1.90,   2.10,   2.10],
+            [100,   0.10,  0.25,  0.16,  0.71,  1.00,  1.40,   1.80,   2.00,   2.20,   2.20],
+            [125,   0.16,  0.28,  0.25,  0.75,  1.05,  1.50,   1.90,   2.10,   2.40,   2.40],
+            [160,   0.25,  0.32,  0.40,  0.80,  1.10,  1.60,   2.00,   2.20,   2.50,   2.50],
+            [200,   0.40,  0.42,  0.63,  1.00,  1.40,  2.00,   2.50,   2.80,   3.20,   3.20],
+            [250,   0.56,  0.56,  1.00,  1.25,  1.80,  2.50,   3.20,   3.60,   4.00,   4.00],
+            [320,   0.75,  0.75,  1.60,  1.60,  2.20,  3.20,   4.00,   4.50,   5.00,   5.00],
+            [400,   1.00,  1.00,  2.00,  2.00,  2.80,  4.00,   5.00,   5.60,   6.30,   6.30],
+            [500,   1.30,  1.30,  2.50,  2.50,  3.60,  5.00,   6.30,   7.10,   8.00,   8.00],
+            [630,   1.80,  1.80,  3.20,  3.20,  4.50,  6.30,   8.00,   9.00,  10.00,  10.00],
+            [800,   2.40,  2.40,  4.00,  4.00,  5.60,  8.00,  10.00,  11.00,  12.50,  12.50],
+            [1000,  3.20,  3.20,  5.00,  5.00,  7.10, 10.00,  12.50,  14.00,  16.00,  16.00],
+            [1250,  4.20,  4.20,  6.30,  6.30,  9.00, 12.50,  16.00,  18.00,  20.00,  20.00],
+            [1600,  5.60,  5.60,  8.00,  8.00, 11.00, 16.00,  20.00,  22.00,  25.00,  25.00],
+            [2000,  7.50,  7.50, 10.00, 10.00, 14.00, 20.00,  25.00,  28.00,  32.00,  32.00],
+            [2500, 10.00, 10.00, 12.50, 12.50, 18.00, 25.00,  32.00,  36.00,  40.00,  40.00],
+            [3200, 12.50, 12.50, 16.00, 16.00, 22.00, 32.00,  40.00,  45.00,  50.00,  50.00],
+            [4000, 16.00, 16.00, 20.00, 20.00, 28.00, 40.00,  50.00,  56.00,  63.00,  63.00],
+            [5000, 20.00, 20.00, 25.00, 25.00, 36.00, 50.00,  63.00,  71.00,  80.00,  80.00],
+            [6300, 25.00, 25.00, 32.00, 32.00, 45.00, 63.00,  80.00,  90.00, 100.00, 100.00],
+            [8000, 32.00, 32.00, 40.00, 40.00, 56.00, 80.00, 100.00, 110.00, 125.00, 125.00],
+            [10000, 40.00, 40.00, 50.00, 50.00, 71.00, 100.00, 125.00, 140.00, 160.00, 160.00],
+            [12500, 50.00, 50.00, 63.00, 63.00, 90.00, 125.00, 160.00, 180.00, 200.00, 200.00],
+            [16000, 63.00, 63.00, 80.00, 80.00, 110.00, 160.00, 200.00, 220.00, 250.00, 250.00],
+            [20000, 80.00, 80.00, 100.00, 100.00, 140.00, 200.00, 250.00, 280.00, 320.00, 320.00],
+            [25000, 100.00, 100.00, 125.00, 125.00, 180.00, 250.00, 320.00, 360.00, 400.00, 400.00],
+            [32000, 125.00, 125.00, 160.00, 160.00, 220.00, 320.00, 400.00, 450.00, 500.00, 500.00],
+            [40000, 160.00, 160.00, 200.00, 200.00, 280.00, 400.00, 500.00, 560.00, 630.00, 630.00],
+            [50000, 200.00, 200.00, 250.00, 250.00, 360.00, 500.00, 630.00, 710.00, 800.00, 800.00],
+            [63000, 250.00, 250.00, 320.00, 320.00, 450.00, 630.00, 800.00, 900.00, 1000.00, 1000.00]
+        ];
+
+        // Table 2Q: Coated Printed Boards [Upk上限, F/B/S, R]
+        const TABLE_2Q = [
+            [90, 0.1, 0.2], [180, 0.2, 0.4], [230, 0.3, 0.6], [285, 0.4, 0.8],
+            [355, 0.6, 1.2], [455, 0.8, 1.6], [570, 1.0, 2.0], [710, 1.3, 2.6],
+            [895, 1.8, 3.6], [1135, 2.4, 3.8], [1450, 2.8, 4.0], [1800, 3.4, 4.2],
+            [2300, 4.1, 4.6], [2850, 5.0, 5.0], [3550, 6.3, 6.3], [4550, 8.2, 8.2],
+            [5700, 10.0, 10.0], [7100, 13.0, 13.0], [8950, 16.0, 16.0], [11350, 20.0, 20.0],
+            [14200, 26.0, 26.0], [18000, 33.0, 33.0], [23000, 43.0, 43.0], [28500, 55.0, 55.0],
+            [35500, 70.0, 70.0], [45500, 86.0, 86.0]
+        ];
+
+        // =========================================================================
+        // 2. 狀態與 UI 控制函式
+        // =========================================================================
+        let currentCircuit = 'primary';
+        let currentPhase = 'single';
+        let lastSummaryText = '';
+
+        // 三相電系統對照表 (SOP v10 參數二規則：Delta High-leg 取相間線電壓，其餘取相對中性線電壓)
+        const THREE_PHASE_SYSTEMS = {
+            '120/208': {
+                label: '120/208 V 三相四線制 (Wye)',
+                acMainsEval: 120,
+                ruleNote: '三相四線 Wye 系統，依 SOP v10 取相對中性線電壓 (120 V) 作為 AC MAINS SUPPLY 查詢基準。'
+            },
+            '120/240': {
+                label: '120/240 V 三相四線 Delta (High-leg)',
+                acMainsEval: 240,
+                ruleNote: '三相四線 Delta (High-leg) 系統，依 SOP v10 取相間線電壓 (240 V) 作為 AC MAINS SUPPLY 查詢基準。'
+            },
+            '230/400': {
+                label: '230/400 V 三相四線制 (Wye)',
+                acMainsEval: 230,
+                ruleNote: '三相四線 Wye 系統，依 SOP v10 取相對中性線電壓 (230 V) 作為 AC MAINS SUPPLY 查詢基準。'
+            },
+            '277/480': {
+                label: '277/480 V 三相四線制 (Wye)',
+                acMainsEval: 277,
+                ruleNote: '三相四線 Wye 系統，依 SOP v10 取相對中性線電壓 (277 V) 作為 AC MAINS SUPPLY 查詢基準。'
+            },
+            '400/690': {
+                label: '400/690 V 三相四線制 (Wye)',
+                acMainsEval: 400,
+                ruleNote: '三相四線 Wye 系統，依 SOP v10 取相對中性線電壓 (400 V) 作為 AC MAINS SUPPLY 查詢基準。'
+            }
+        };
+
+        function setPhaseType(phase) {
+            currentPhase = phase;
+            const btn1 = document.getElementById('btn-phase-1');
+            const btn3 = document.getElementById('btn-phase-3');
+            const input1 = document.getElementById('single-phase-input');
+            const input3 = document.getElementById('three-phase-input');
+
+            if (phase === 'single') {
+                btn1.className = 'py-1.5 px-2.5 rounded-md text-xs font-semibold transition shadow-sm bg-white text-blue-700 cursor-pointer';
+                btn3.className = 'py-1.5 px-2.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer';
+                input1.classList.remove('hidden');
+                input3.classList.add('hidden');
+            } else {
+                btn3.className = 'py-1.5 px-2.5 rounded-md text-xs font-semibold transition shadow-sm bg-white text-blue-700 cursor-pointer';
+                btn1.className = 'py-1.5 px-2.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer';
+                input3.classList.remove('hidden');
+                input1.classList.add('hidden');
+            }
+            calculate();
+        }
+
+        function setCircuitType(type) {
+            currentCircuit = type;
+            const btnPrimary = document.getElementById('btn-primary');
+            const btnSecondary = document.getElementById('btn-secondary');
+            const primarySettings = document.getElementById('primary-settings');
+            const secondarySettings = document.getElementById('secondary-settings');
+
+            if (type === 'primary') {
+                btnPrimary.className = 'py-2 px-3 rounded-lg text-sm font-semibold transition shadow-sm bg-white text-blue-700 cursor-pointer';
+                btnSecondary.className = 'py-2 px-3 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer';
+                primarySettings.classList.remove('hidden');
+                secondarySettings.classList.add('hidden');
+            } else {
+                btnSecondary.className = 'py-2 px-3 rounded-lg text-sm font-semibold transition shadow-sm bg-white text-blue-700 cursor-pointer';
+                btnPrimary.className = 'py-2 px-3 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer';
+                secondarySettings.classList.remove('hidden');
+                primarySettings.classList.add('hidden');
+            }
+            calculate();
+        }
+
+        function setAltitude(alt) {
+            document.getElementById('altitude').value = alt;
+            calculate();
+        }
+
+        function resetDefaults() {
+            setCircuitType('primary');
+            setPhaseType('single');
+            document.getElementById('ac-mains').value = 230;
+            document.getElementById('ac-mains-3p').value = '230/400';
+            document.getElementById('ov-cat').value = '2';
+            document.getElementById('sec-transient').value = '1500';
+            document.getElementById('u-pk').value = 325;
+            document.getElementById('u-rms').value = 230;
+            document.getElementById('altitude').value = 3000;
+            document.getElementById('pollution-degree').value = '2';
+            document.getElementById('material-group').value = 'IIIb';
+            document.getElementById('qc-program').checked = false;
+            document.getElementById('coated-pcb').checked = false;
+            calculate();
+            showToast('已恢復為 SOP 預設參數 (單相 230V / 海拔 3000m)');
+        }
+
+        // 無條件進位至下一個 0.1 mm (避免浮點數誤差如 2.3000000000000003 進位成 2.4)
+        function roundUp01(val) {
+            const cleaned = Math.round(val * 10000) / 10000;
+            return Math.ceil(cleaned * 10) / 10;
+        }
+
+        function formatMM(val) {
+            return val.toFixed(1);
+        }
+
+        // =========================================================================
+        // 3. 核心查表與插值演算法
+        // =========================================================================
+
+        // 計算海拔修正倍率 (Table A.2 + 線性插值)
+        function getAltitudeFactor(alt) {
+            if (alt <= 2000) return { factor: 1.00, note: '海拔 ≤ 2000m，無需高海拔修正 (倍率 1.00)' };
+            for (let i = 0; i < TABLE_A2.length - 1; i++) {
+                const [a1, f1] = TABLE_A2[i];
+                const [a2, f2] = TABLE_A2[i + 1];
+                if (alt === a1) return { factor: f1, note: `直接對照 Table A.2 (${a1}m → ${f1.toFixed(2)})` };
+                if (alt === a2) return { factor: f2, note: `直接對照 Table A.2 (${a2}m → ${f2.toFixed(2)})` };
+                if (alt > a1 && alt < a2) {
+                    const f = f1 + ((alt - a1) / (a2 - a1)) * (f2 - f1);
+                    return {
+                        factor: f,
+                        note: `線性插值於 ${a1}m (${f1}) 與 ${a2}m (${f2}) 之間：${f1} + ((${alt}-${a1})/(${a2}-${a1})) × (${f2}-${f1}) = ${f.toFixed(4)}`
+                    };
+                }
+            }
+            return { factor: 14.5, note: '超過 20000m 上限，採用最高倍率 14.5' };
+        }
+
+        // 查詢 Table G.1 市電瞬態電壓
+        function getMainsTransient(acMains, ovCat) {
+            const catIdx = ovCat - 1; // 0: Cat I, 1: Cat II, 2: Cat III, 3: Cat IV
+            if (acMains <= 50)  return [330, 500, 800, 1500][catIdx];
+            if (acMains <= 100) return [500, 800, 1500, 2500][catIdx];
+            if (acMains <= 150) return [800, 1500, 2500, 4000][catIdx];
+            if (acMains <= 300) return [1500, 2500, 4000, 6000][catIdx];
+            return [2500, 4000, 6000, 8000][catIdx];
+        }
+
+        // 查詢 Table 2K 基礎間距 (SOP v8 完整支援 F, B/S, R 與 PD1&2 / PD3)
+        function lookupTable2K(voltage, transient, pd, isQC) {
+            const row = TABLE_2K.find(r => voltage <= r[0]) || TABLE_2K[TABLE_2K.length - 1];
+            const isPD3 = (pd === '3');
+            let fVal, bsVal, rVal;
+
+            if (transient <= 1500) {
+                if (!isPD3) {
+                    fVal  = row[1];
+                    bsVal = isQC ? row[3] : row[2];
+                    rVal  = isQC ? row[5] : row[4];
+                } else {
+                    fVal  = row[6];
+                    bsVal = isQC ? row[8] : row[7];
+                    rVal  = isQC ? row[10] : row[9];
+                }
+            } else if (transient <= 2500) {
+                if (!isPD3) {
+                    fVal  = row[11];
+                    bsVal = isQC ? row[13] : row[12];
+                    rVal  = isQC ? row[15] : row[14];
+                } else {
+                    fVal  = row[16];
+                    bsVal = isQC ? row[18] : row[17];
+                    rVal  = isQC ? row[20] : row[19];
+                }
+            } else {
+                // 4000V (PD 1, 2 & 3 共用)
+                fVal  = row[21];
+                bsVal = isQC ? row[23] : row[22];
+                rVal  = isQC ? row[25] : row[24];
+            }
+
+            return { rowVoltage: row[0], f: fVal, bs: bsVal, r: rVal };
+        }
+
+        // 查詢 Table G.2 (當瞬態 > 4000V 時)
+        function lookupTableG2(transient, pd) {
+            const row = TABLE_G2.find(r => transient <= r[0]) || TABLE_G2[TABLE_G2.length - 1];
+            const pdIdx = pd === '1' ? 0 : (pd === '2' ? 1 : 2);
+            const bs = row[1 + pdIdx];
+            const r = row[4 + pdIdx];
+            return { rowTransient: row[0], f: bs, bs, r };
+        }
+
+        // 查詢 Table 2L 附加間距 (條件 B2)
+        function lookupTable2L(upk, transient, pd, isQC) {
+            if (transient === 1500) {
+                const vCol = (pd === '3') ? (isQC ? 3 : 2) : (isQC ? 1 : 0);
+                // 篩選出該欄位有數值的列
+                const validRows = TABLE_2L_1500.filter(r => r[vCol] !== null);
+                const lastRow = validRows[validRows.length - 1];
+                const prevRow = validRows[validRows.length - 2];
+
+                if (upk <= validRows[0][vCol]) {
+                    return { addBS: 0.0, addR: 0.0, note: `實測 $U_{pk}$ (${upk}V) ≤ ${validRows[0][vCol]}V，附加間距為 0.0 mm` };
+                }
+                for (let r of validRows) {
+                    if (upk <= r[vCol]) {
+                        return { addBS: r[4], addR: r[5], note: `對照 Table 2L (1500V 瞬態) 階層 ≤ ${r[vCol]}V：附加 B/S = ${r[4].toFixed(1)} mm, R = ${r[5].toFixed(1)} mm` };
+                    }
+                }
+                // 線性外推法
+                const vStep = lastRow[vCol] - prevRow[vCol];
+                const extraSteps = Math.ceil((upk - lastRow[vCol]) / vStep);
+                const addBS = Math.round((lastRow[4] + extraSteps * 0.1) * 10) / 10;
+                const addR = Math.round((lastRow[5] + extraSteps * 0.2) * 10) / 10;
+                return {
+                    addBS,
+                    addR,
+                    note: `超過表列上限 ${lastRow[vCol]}V，依 SOP 執行線性外推 (每 +${vStep}V 增加 0.1/0.2mm)：附加 B/S = ${addBS.toFixed(1)} mm, R = ${addR.toFixed(1)} mm`
+                };
+            } else if (transient === 2500) {
+                const vCol = isQC ? 1 : 0;
+                const validRows = TABLE_2L_2500.filter(r => r[vCol] !== null);
+                const lastRow = validRows[validRows.length - 1];
+                const prevRow = validRows[validRows.length - 2];
+
+                if (upk <= validRows[0][vCol]) {
+                    return { addBS: 0.0, addR: 0.0, note: `實測 $U_{pk}$ (${upk}V) ≤ ${validRows[0][vCol]}V，附加間距為 0.0 mm` };
+                }
+                for (let r of validRows) {
+                    if (upk <= r[vCol]) {
+                        return { addBS: r[2], addR: r[3], note: `對照 Table 2L (2500V 瞬態) 階層 ≤ ${r[vCol]}V：附加 B/S = ${r[2].toFixed(1)} mm, R = ${r[3].toFixed(1)} mm` };
+                    }
+                }
+                // 線性外推法
+                const vStep = lastRow[vCol] - prevRow[vCol];
+                const extraSteps = Math.ceil((upk - lastRow[vCol]) / vStep);
+                const addBS = Math.round((lastRow[2] + extraSteps * 0.1) * 10) / 10;
+                const addR = Math.round((lastRow[3] + extraSteps * 0.2) * 10) / 10;
+                return {
+                    addBS,
+                    addR,
+                    note: `超過表列上限 ${lastRow[vCol]}V，依 SOP 執行線性外推 (每 +${vStep}V 增加 0.1/0.2mm)：附加 B/S = ${addBS.toFixed(1)} mm, R = ${addR.toFixed(1)} mm`
+                };
+            }
+            return { addBS: 0.0, addR: 0.0, note: '此瞬態等級無需 Table 2L 附加間距' };
+        }
+
+        // 查詢 Table 2M (二次電路)
+        function lookupTable2M(upk, secTransient, isQC) {
+            const row = TABLE_2M.find(r => upk <= r[0]) || TABLE_2M[TABLE_2M.length - 1];
+            let bs, r;
+            if (secTransient <= 71) {
+                bs = row[1]; r = row[2];
+            } else if (secTransient <= 800) {
+                bs = isQC ? row[4] : row[3];
+                r  = isQC ? row[6] : row[5];
+            } else if (secTransient <= 1500) {
+                bs = isQC ? row[8] : row[7];
+                r  = isQC ? row[10] : row[9];
+            } else {
+                bs = isQC ? row[12] : row[11];
+                r  = isQC ? row[14] : row[13];
+            }
+            return { rowVoltage: row[0], f: bs, bs, r };
+        }
+
+        // 查詢 Table 2N 沿面距離並執行線性插值與進位
+        function lookupCreepage(urms, pd, matGroup) {
+            // 決定欄位索引
+            // [Urms, PD1_F(1), PD1_BS(2), PD2_PCB(3), PD2_I(4), PD2_II(5), PD2_III(6), PD3_I(7), PD3_II(8), PD3_IIIa(9), PD3_IIIb(10)]
+            let colF, colBS;
+            let colDesc = '';
+
+            if (pd === '1') {
+                colF = 1;
+                colBS = 2;
+                colDesc = 'PD 1 (全材料組別)';
+            } else if (pd === '2') {
+                if (matGroup === 'PCB') {
+                    colF = 3; colBS = 3;
+                    colDesc = 'PD 2 / PCB 裸板';
+                } else if (matGroup === 'I') {
+                    colF = 4; colBS = 4;
+                    colDesc = 'PD 2 / Group I';
+                } else if (matGroup === 'II') {
+                    colF = 5; colBS = 5;
+                    colDesc = 'PD 2 / Group II';
+                } else {
+                    colF = 6; colBS = 6;
+                    colDesc = `PD 2 / Group ${matGroup}`;
+                }
+            } else {
+                // PD 3 (若誤選 PCB 裸板則自動轉為 Group IIIb 評估)
+                if (matGroup === 'I') {
+                    colF = 7; colBS = 7;
+                    colDesc = 'PD 3 / Group I';
+                } else if (matGroup === 'II') {
+                    colF = 8; colBS = 8;
+                    colDesc = 'PD 3 / Group II';
+                } else if (matGroup === 'IIIa') {
+                    colF = 9; colBS = 9;
+                    colDesc = 'PD 3 / Group IIIa';
+                } else {
+                    colF = 10; colBS = 10;
+                    colDesc = matGroup === 'PCB' ? 'PD 3 / Group IIIb (PD3 不適用 PCB 裸板減免，自動以 IIIb 評估)' : 'PD 3 / Group IIIb';
+                }
+            }
+
+            if (urms <= TABLE_2N[0][0]) {
+                const fRaw = TABLE_2N[0][colF];
+                const bsRaw = TABLE_2N[0][colBS];
+                return {
+                    funcReq: roundUp01(fRaw),
+                    basicReq: roundUp01(bsRaw),
+                    reinfReq: roundUp01(bsRaw * 2),
+                    note: `實測 $U_{rms}$ (${urms}V) ≤ 10V，直接取 Table 2N (${colDesc}) 最低階層值：F = ${fRaw}mm, B/S = ${bsRaw}mm`
+                };
+            }
+
+            for (let i = 0; i < TABLE_2N.length; i++) {
+                const row = TABLE_2N[i];
+                if (urms === row[0]) {
+                    const fRaw = row[colF];
+                    const bsRaw = row[colBS];
+                    return {
+                        funcReq: roundUp01(fRaw),
+                        basicReq: roundUp01(bsRaw),
+                        reinfReq: roundUp01(bsRaw * 2),
+                        note: `實測 $U_{rms}$ (${urms}V) 恰好符合 Table 2N (${colDesc}) ${row[0]}V 階層：B/S 查表值 = ${bsRaw} mm，進位後為 ${roundUp01(bsRaw).toFixed(1)} mm；強化絕緣先乘 2 (${(bsRaw * 2).toFixed(2)} mm) 後進位 = ${roundUp01(bsRaw * 2).toFixed(1)} mm。`
+                    };
+                }
+                if (urms < row[0] && i > 0) {
+                    const prev = TABLE_2N[i - 1];
+                    const u1 = prev[0], u2 = row[0];
+                    const f1 = prev[colF], f2 = row[colF];
+                    const b1 = prev[colBS], b2 = row[colBS];
+
+                    const ratio = (urms - u1) / (u2 - u1);
+                    const fCalc = f1 + ratio * (f2 - f1);
+                    const bCalc = b1 + ratio * (b2 - b1);
+                    const rCalc = bCalc * 2;
+
+                    const funcReq = roundUp01(fCalc);
+                    const basicReq = roundUp01(bCalc);
+                    const reinfReq = roundUp01(rCalc);
+
+                    return {
+                        funcReq,
+                        basicReq,
+                        reinfReq,
+                        note: `介於 Table 2N (${colDesc}) ${u1}V (${b1}mm) 與 ${u2}V (${b2}mm) 之間，執行線性插值：<br>` +
+                              `• 基本絕緣插值：$Dcr_{basic} = ${b1} + \\frac{${urms}-${u1}}{${u2}-${u1}} \\times (${b2}-${b1}) = ${bCalc.toFixed(3)}\\text{ mm}$ → 進位至 0.1mm 得 <b>${basicReq.toFixed(1)} mm</b><br>` +
+                              `• 強化絕緣先乘 2 再進位：$${bCalc.toFixed(3)} \\times 2 = ${rCalc.toFixed(3)}\\text{ mm}$ → 進位至 0.1mm 得 <b>${reinfReq.toFixed(1)} mm</b>`
+                    };
+                }
+            }
+
+            const maxRow = TABLE_2N[TABLE_2N.length - 1];
+            return {
+                funcReq: roundUp01(maxRow[colF]),
+                basicReq: roundUp01(maxRow[colBS]),
+                reinfReq: roundUp01(maxRow[colBS] * 2),
+                note: `超過 Table 2N 最高電壓階層 63000V，採用最大表列值。`
+            };
+        }
+
+        // =========================================================================
+        // 4. 主計算與渲染引擎
+        // =========================================================================
+        function calculate() {
+            const ovCat = parseInt(document.getElementById('ov-cat').value) || 2;
+            const secTransient = parseInt(document.getElementById('sec-transient').value) || 1500;
+            const upk = parseFloat(document.getElementById('u-pk').value) || 0;
+            const urms = parseFloat(document.getElementById('u-rms').value) || 0;
+            const altitude = parseFloat(document.getElementById('altitude').value) || 2000;
+            const pd = document.getElementById('pollution-degree').value;
+            const matGroup = document.getElementById('material-group').value;
+            const isQC = document.getElementById('qc-program').checked;
+            const isCoated = document.getElementById('coated-pcb').checked;
+
+            // 取得 AC Mains 評估基準電壓 (區分單相與三相)
+            let acMains = 0;
+            let phaseSystemDesc = '';
+            let phaseRuleDesc = '';
+
+            if (currentPhase === 'single') {
+                acMains = parseFloat(document.getElementById('ac-mains').value) || 0;
+                phaseSystemDesc = `單相電系統 (${acMains} V rms)`;
+                phaseRuleDesc = `單相 AC 市電額定電壓為 <b>${acMains} V rms</b>`;
+            } else {
+                const sysKey = document.getElementById('ac-mains-3p').value;
+                const sysInfo = THREE_PHASE_SYSTEMS[sysKey] || THREE_PHASE_SYSTEMS['230/400'];
+                acMains = sysInfo.acMainsEval;
+                phaseSystemDesc = `三相電系統 ${sysKey} V (基準 ${acMains} V)`;
+                phaseRuleDesc = `選擇 <b>${sysInfo.label}</b>；${sysInfo.ruleNote}`;
+                document.getElementById('three-phase-rule-hint').textContent = sysInfo.ruleNote;
+            }
+
+            // 計算市電峰值
+            const mainsPeak = acMains * Math.SQRT2;
+            document.getElementById('mains-peak-badge').textContent = `峰值: ${mainsPeak.toFixed(1)} V`;
+            document.getElementById('mains-peak-badge-3p').textContent = `基準 ${acMains}V | 峰值 ${mainsPeak.toFixed(1)}V`;
+
+            // 計算海拔倍率
+            const altInfo = getAltitudeFactor(altitude);
+            document.getElementById('alt-factor-badge').textContent = `倍率: ${altInfo.factor.toFixed(2)}x`;
+
+            const steps = [];
+            const alerts = [];
+
+            let clBaseF = 0, clBaseBS = 0, clBaseR = 0;
+            let transientLabel = '';
+
+            // ---------------------------------------------------------------------
+            // 步驟 A：空間間距基準值 (Cl_base) 判定
+            // ---------------------------------------------------------------------
+            if (isCoated) {
+                // Table 2Q 塗層 PCB 模式
+                const row2Q = TABLE_2Q.find(r => upk <= r[0]) || TABLE_2Q[TABLE_2Q.length - 1];
+                clBaseF = row2Q[1];
+                clBaseBS = row2Q[1];
+                clBaseR = row2Q[2];
+                transientLabel = '塗層 PCB (Table 2Q)';
+
+                steps.push({
+                    title: '步驟 1：塗層 PCB 分離距離評估 (SOP 5.1 / Table 2Q)',
+                    content: `已勾選符合 UL 746C 防潮塗層 PCB 條件，直接依據峰值工作電壓 $U_{pk} = ${upk}\\text{ V}$ 對照 <b>Table 2Q</b> (階層 ≤ ${row2Q[0]}V)：<br>` +
+                             `功能/基本絕緣最小分離距離 = <b>${clBaseBS.toFixed(1)} mm</b>，強化絕緣 = <b>${clBaseR.toFixed(1)} mm</b>。`
+                });
+            } else if (currentCircuit === 'primary') {
+                // 一次電路 SOP 3.1
+                const transient = getMainsTransient(acMains, ovCat);
+                transientLabel = `瞬態 ${transient}V`;
+
+                steps.push({
+                    title: '步驟 1：單相/三相電源系統與市電瞬態過電壓判定 (SOP 2 & Table G.1)',
+                    content: `${phaseRuleDesc}<br>` +
+                             `換算 AC MAINS SUPPLY 峰值 $U_{a.c.\\,mains\\,peak} = ${acMains} \\times \\sqrt{2} = \\mathbf{${mainsPeak.toFixed(1)}\\text{ V}}$。<br>` +
+                             `對照 <b>Table G.1</b> (AC 市電級距 ${acMains}V, Overvoltage Category ${['I','II','III','IV'][ovCat-1]})，查得市電瞬態電壓為 <b>${transient} V peak</b>。`
+                });
+
+                if (transient > 4000) {
+                    // 條件 A
+                    const resG2 = lookupTableG2(transient, pd);
+                    clBaseF = resG2.f;
+                    clBaseBS = resG2.bs;
+                    clBaseR = resG2.r;
+
+                    steps.push({
+                        title: '步驟 2：一次電路空間間距基準判定 — 【條件 A】(SOP 3.1)',
+                        content: `由於市電瞬態電壓 (${transient}V) <b>大於 4000V</b>，符合<b>條件 A</b>。<br>` +
+                                 `依 SOP 規範對照 <b>Table G.2</b> (耐受電壓 ${(transient/1000).toFixed(1)} kV, PD ${pd})，取得基準空間間距 $Cl_{base}$：` +
+                                 `功能 (F) = <b>${clBaseF.toFixed(1)} mm</b>，基本/補充 (B/S) = <b>${clBaseBS.toFixed(1)} mm</b>，強化 (R) = <b>${clBaseR.toFixed(1)} mm</b>。`
+                    });
+                } else if (acMains <= 300) {
+                    // 條件 B
+                    const res2K = lookupTable2K(mainsPeak, transient, pd, isQC);
+                    if (upk <= mainsPeak) {
+                        // 情況 B1
+                        clBaseF = res2K.f;
+                        clBaseBS = res2K.bs;
+                        clBaseR = res2K.r;
+
+                        steps.push({
+                            title: '步驟 2：一次電路空間間距基準判定 — 【條件 B1】(SOP 3.1)',
+                            content: `市電瞬態電壓 (${transient}V) ≤ 4000V 且市電額定 (${acMains}V) ≤ 300V rms，符合<b>條件 B</b>。<br>` +
+                                     `實測峰值工作電壓 $U_{pk}$ (${upk}V) ≤ 市電峰值 (${mainsPeak.toFixed(1)}V)，屬<b>情況 B1</b>（無需加算 Table 2L）。<br>` +
+                                     `一律以市電峰值 <b>${mainsPeak.toFixed(1)} V</b> 查詢 <b>Table 2K</b> (階層 ≤ ${res2K.rowVoltage}V, PD ${pd}${isQC ? ', 含 Annex R.2 品管減免' : ''})：<br>` +
+                                     `• 功能絕緣 $Cl_{base(F)}$ = <b>${clBaseF.toFixed(1)} mm</b><br>` +
+                                     `• 基本/補充 $Cl_{base(B/S)}$ = <b>${clBaseBS.toFixed(1)} mm</b><br>` +
+                                     `• 強化絕緣 $Cl_{base(R)}$ = <b>${clBaseR.toFixed(1)} mm</b>`
+                        });
+                    } else {
+                        // 情況 B2
+                        const res2L = lookupTable2L(upk, transient, pd, isQC);
+                        clBaseF = Math.round((res2K.f + res2L.addBS) * 10) / 10;
+                        clBaseBS = Math.round((res2K.bs + res2L.addBS) * 10) / 10;
+                        clBaseR = Math.round((res2K.r + res2L.addR) * 10) / 10;
+
+                        steps.push({
+                            title: '步驟 2：一次電路空間間距基準判定 — 【條件 B2】(SOP 3.1 & Table 2L)',
+                            content: `市電瞬態電壓 (${transient}V) ≤ 4000V 且市電額定 (${acMains}V) ≤ 300V rms，符合<b>條件 B</b>。<br>` +
+                                     `實測峰值工作電壓 $U_{pk}$ (<b>${upk} V</b>) <b>大於</b> 市電峰值 (${mainsPeak.toFixed(1)}V)，觸發<b>情況 B2</b>：<br>` +
+                                     `1. 先以市電峰值 ${mainsPeak.toFixed(1)}V 查 <b>Table 2K</b> (≤ ${res2K.rowVoltage}V)：F = ${res2K.f.toFixed(1)}mm, B/S = ${res2K.bs.toFixed(1)}mm, R = ${res2K.r.toFixed(1)}mm。<br>` +
+                                     `2. 再以實測 $U_{pk}$ = ${upk}V 查 <b>Table 2L</b>：${res2L.note}。<br>` +
+                                     `3. 兩者相加得基準空間間距 $Cl_{base}$：F = <b>${clBaseF.toFixed(1)} mm</b>，B/S = <b>${clBaseBS.toFixed(1)} mm</b>，R = <b>${clBaseR.toFixed(1)} mm</b>。`
+                        });
+                    }
+                } else {
+                    // 條件 C (acMains > 300V 且 transient <= 4000V)
+                    const res2K = lookupTable2K(mainsPeak, transient, pd, isQC);
+                    clBaseF = res2K.f;
+                    clBaseBS = res2K.bs;
+                    clBaseR = res2K.r;
+
+                    steps.push({
+                        title: '步驟 2：一次電路空間間距基準判定 — 【條件 C】(SOP 3.1)',
+                        content: `市電瞬態電壓 (${transient}V) ≤ 4000V 且市電額定 (${acMains}V) <b>大於 300V rms</b>，符合<b>條件 C</b>。<br>` +
+                                 `依 SOP 規範：以市電峰值 <b>${mainsPeak.toFixed(1)} V</b> 查詢 <b>Table 2K</b> (階層 ≤ ${res2K.rowVoltage}V)，且<b>無需加算 Table 2L 附加間距</b>：<br>` +
+                                 `• 功能絕緣 $Cl_{base(F)}$ = <b>${clBaseF.toFixed(1)} mm</b><br>` +
+                                 `• 基本/補充 $Cl_{base(B/S)}$ = <b>${clBaseBS.toFixed(1)} mm</b><br>` +
+                                 `• 強化絕緣 $Cl_{base(R)}$ = <b>${clBaseR.toFixed(1)} mm</b>`
+                    });
+                }
+            } else {
+                // 二次電路 SOP 3.2
+                const res2M = lookupTable2M(upk, secTransient, isQC);
+                clBaseF = res2M.f;
+                clBaseBS = res2M.bs;
+                clBaseR = res2M.r;
+                transientLabel = `二次瞬態 ≤${secTransient}V`;
+
+                steps.push({
+                    title: '步驟 1 & 2：二次電路空間間距判定 (SOP 3.2 / Table 2M)',
+                    content: `依據實測峰值工作電壓 $U_{pk} = ${upk}\\text{ V}$ (階層 ≤ ${res2M.rowVoltage}V) 與二次側瞬態過電壓範圍 (≤ ${secTransient}V peak)，對照 <b>Table 2M</b>：<br>` +
+                             `取得基準空間間距 $Cl_{base}$：功能/基本/補充 = <b>${clBaseBS.toFixed(1)} mm</b>，強化絕緣 = <b>${clBaseR.toFixed(1)} mm</b>。`
+                });
+            }
+
+            // ---------------------------------------------------------------------
+            // 步驟 B：高海拔修正與 0.1mm 無條件進位 (SOP 3.3 / Table A.2)
+            // ---------------------------------------------------------------------
+            const rawAltF = clBaseF * altInfo.factor;
+            const rawAltBS = clBaseBS * altInfo.factor;
+            const rawAltR = clBaseR * altInfo.factor;
+
+            const clReqF = roundUp01(rawAltF);
+            const clReqBS = roundUp01(rawAltBS);
+            const clReqR = roundUp01(rawAltR);
+
+            steps.push({
+                title: `步驟 3：高海拔修正與無條件進位計算 (SOP 3.3 / Table A.2 — ${altitude}m)`,
+                content: `${altInfo.note}。僅針對<b>空間間距 (Cl)</b> 乘以海拔倍率並無條件進位至下一個 0.1 mm：<br>` +
+                         `• 功能絕緣：$Cl_{req(F)} = ${clBaseF.toFixed(1)} \\times ${altInfo.factor.toFixed(2)} = ${rawAltF.toFixed(3)}\\text{ mm}$ → 進位後為 <b>${clReqF.toFixed(1)} mm</b><br>` +
+                         `• 基本/補充：$Cl_{req(B/S)} = ${clBaseBS.toFixed(1)} \\times ${altInfo.factor.toFixed(2)} = ${rawAltBS.toFixed(3)}\\text{ mm}$ → 進位後為 <b>${clReqBS.toFixed(1)} mm</b><br>` +
+                         `• 強化絕緣：$Cl_{req(R)} = ${clBaseR.toFixed(1)} \\times ${altInfo.factor.toFixed(2)} = ${rawAltR.toFixed(3)}\\text{ mm}$ → 進位後為 <b>${clReqR.toFixed(1)} mm</b>`
+            });
+
+            // ---------------------------------------------------------------------
+            // 步驟 C：沿面距離查詢、插值與 Dcr >= Cl 強制規則 (SOP 4)
+            // ---------------------------------------------------------------------
+            let dcrFinalF, dcrFinalBS, dcrFinalR;
+
+            if (isCoated) {
+                dcrFinalF = clReqF;
+                dcrFinalBS = clReqBS;
+                dcrFinalR = clReqR;
+                steps.push({
+                    title: '步驟 4：沿面距離與最終檢核 (塗層 PCB 模式)',
+                    content: `塗層 PCB 依 Table 2Q 評估最小分離距離（已包含高海拔空間間距修正檢核），最終要求與空間間距一致。`
+                });
+            } else {
+                const creepInfo = lookupCreepage(urms, pd, matGroup);
+
+                // 強制規則：Dcr 不得小於最終要求之 Cl (SOP 4.3)
+                dcrFinalF = Math.max(creepInfo.funcReq, clReqF);
+                dcrFinalBS = Math.max(creepInfo.basicReq, clReqBS);
+                dcrFinalR = Math.max(creepInfo.reinfReq, clReqR);
+
+                const bumpedF = dcrFinalF > creepInfo.funcReq;
+                const bumpedBS = dcrFinalBS > creepInfo.basicReq;
+                const bumpedR = dcrFinalR > creepInfo.reinfReq;
+
+                let bumpNote = '';
+                if (bumpedF || bumpedBS || bumpedR) {
+                    bumpNote = `<div class="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-xs">` +
+                               `<b>⚠️ 觸發 SOP 4.3 強制規則 ($Dcr \\ge Cl$)：</b>因高海拔修正後之空間間距大於 Table 2N 沿面距離查表值，沿面距離已自動強制提升至等於空間間距 (` +
+                               [
+                                   bumpedF ? `功能: ${creepInfo.funcReq.toFixed(1)}→${dcrFinalF.toFixed(1)}mm` : '',
+                                   bumpedBS ? `基本: ${creepInfo.basicReq.toFixed(1)}→${dcrFinalBS.toFixed(1)}mm` : '',
+                                   bumpedR ? `強化: ${creepInfo.reinfReq.toFixed(1)}→${dcrFinalR.toFixed(1)}mm` : ''
+                               ].filter(Boolean).join('；') + `)。</div>`;
+                } else {
+                    bumpNote = `<div class="mt-1.5 text-xs text-emerald-700">✓ 檢核 SOP 4.3 規則：沿面距離均已大於或等於空間間距 ($Dcr \\ge Cl$)，無需額外提升。</div>`;
+                }
+
+                steps.push({
+                    title: '步驟 4：沿面距離查表、線性插值與 $Dcr \\ge Cl$ 檢核 (SOP 4.1 ~ 4.3 / Table 2N)',
+                    content: `依據全波形均方根電壓 $U_{rms} = ${urms}\\text{ V}$ 查詢 <b>Table 2N</b>（注意：沿面距離<b>不乘以</b>海拔倍率）：<br>` +
+                             `${creepInfo.note}${bumpNote}`
+                });
+
+                // 檢查 PD3 + Group IIIb + Urms > 630V 警告
+                if (pd === '3' && (matGroup === 'IIIb' || matGroup === 'PCB') && urms > 630) {
+                    alerts.push('注意：依據 SOP Table 2N 附註，Material Group IIIb 不建議應用於 Pollution Degree 3 且 Urms > 630V 之環境。');
+                }
+            }
+
+            // ---------------------------------------------------------------------
+            // 5. 更新 UI 畫面顯示
+            // ---------------------------------------------------------------------
+            document.getElementById('res-func-cl').innerHTML = `${formatMM(clReqF)} <span class="text-xs font-normal text-slate-500">mm</span>`;
+            document.getElementById('res-func-dcr').innerHTML = `${formatMM(dcrFinalF)} <span class="text-xs font-normal text-slate-500">mm</span>`;
+
+            document.getElementById('res-basic-cl').innerHTML = `${formatMM(clReqBS)} <span class="text-xs font-normal text-blue-500">mm</span>`;
+            document.getElementById('res-basic-dcr').innerHTML = `${formatMM(dcrFinalBS)} <span class="text-xs font-normal text-blue-500">mm</span>`;
+
+            document.getElementById('res-reinf-cl').innerHTML = `${formatMM(clReqR)} <span class="text-xs font-normal text-amber-600">mm</span>`;
+            document.getElementById('res-reinf-dcr').innerHTML = `${formatMM(dcrFinalR)} <span class="text-xs font-normal text-amber-600">mm</span>`;
+
+            document.getElementById('summary-badge').textContent = `${transientLabel} | 海拔: ${altitude}m (${altInfo.factor.toFixed(2)}x)`;
+
+            // 警告訊息欄
+            const alertBox = document.getElementById('alert-box');
+            if (alerts.length > 0) {
+                alertBox.className = 'mt-4 p-3 rounded-xl text-xs flex items-start gap-2 bg-rose-50 border border-rose-200 text-rose-800';
+                alertBox.innerHTML = `<span class="font-bold">⚠️ 標準提醒：</span><span>${alerts.join(' ')}</span>`;
+                alertBox.classList.remove('hidden');
+            } else {
+                alertBox.classList.add('hidden');
+            }
+
+            // 渲染邏輯拆解步驟
+            const breakdownEl = document.getElementById('logic-breakdown');
+            breakdownEl.innerHTML = steps.map(s => `
+                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <div class="font-bold text-slate-800 text-xs sm:text-sm mb-1.5 text-indigo-950">${s.title}</div>
+                    <div class="text-xs sm:text-[13px] text-slate-600 leading-relaxed">${renderMathTags(s.content)}</div>
+                </div>
+            `).join('');
+
+            // 儲存純文字摘要供一鍵複製
+            const circuitStr = currentCircuit === 'primary' ? `一次電路 (${phaseSystemDesc}, Cat ${['I','II','III','IV'][ovCat-1]})` : `二次電路 (瞬態 ≤${secTransient}V)`;
+            lastSummaryText =
+                `【UL 1778 / 60950-1 安規絕緣間距查詢結果 (SOP v10)】\n` +
+                `條件：${circuitStr} | Upk=${upk}V, Urms=${urms}V | 海拔=${altitude}m (${altInfo.factor.toFixed(2)}x) | PD ${pd} / Group ${matGroup}\n` +
+                `--------------------------------------------------\n` +
+                `1. 功能絕緣 (Functional)       : Cl = ${formatMM(clReqF)} mm | Dcr = ${formatMM(dcrFinalF)} mm\n` +
+                `2. 基本/補充絕緣 (Basic/Supp.) : Cl = ${formatMM(clReqBS)} mm | Dcr = ${formatMM(dcrFinalBS)} mm\n` +
+                `3. 強化絕緣 (Reinforced)       : Cl = ${formatMM(clReqR)} mm | Dcr = ${formatMM(dcrFinalR)} mm`;
+        }
+
+        // 簡易數學符號美化替換 (避免依賴外部 MathJax 延遲)
+        function renderMathTags(htmlStr) {
+            return htmlStr
+                .replace(/\$U_{pk}\$/g, '<span class="font-mono font-semibold text-slate-800">U<sub>pk</sub></span>')
+                .replace(/\$U_{rms}\$/g, '<span class="font-mono font-semibold text-slate-800">U<sub>rms</sub></span>')
+                .replace(/\$U_{a\.c\.\\,mains\\,peak}/g, '<span class="font-mono font-semibold text-slate-800">U<sub>a.c. mains peak</sub></span>')
+                .replace(/\$Cl_{base\(F\)}\$/g, '<span class="font-mono font-semibold text-slate-800">Cl<sub>base(F)</sub></span>')
+                .replace(/\$Cl_{base\(B\/S\)}\$/g, '<span class="font-mono font-semibold text-slate-800">Cl<sub>base(B/S)</sub></span>')
+                .replace(/\$Cl_{base\(R\)}\$/g, '<span class="font-mono font-semibold text-slate-800">Cl<sub>base(R)</sub></span>')
+                .replace(/\$Cl_{base}\$/g, '<span class="font-mono font-semibold text-slate-800">Cl<sub>base</sub></span>')
+                .replace(/\$Cl_{req\(F\)}\s*=/g, '<span class="font-mono font-semibold text-slate-800">Cl<sub>req(F)</sub> =</span>')
+                .replace(/\$Cl_{req\(B\/S\)}\s*=/g, '<span class="font-mono font-semibold text-slate-800">Cl<sub>req(B/S)</sub> =</span>')
+                .replace(/\$Cl_{req\(R\)}\s*=/g, '<span class="font-mono font-semibold text-slate-800">Cl<sub>req(R)</sub> =</span>')
+                .replace(/\$Dcr_{basic}\s*=/g, '<span class="font-mono font-semibold text-slate-800">Dcr<sub>basic</sub> =</span>')
+                .replace(/\$Dcr\s*\\ge\s*Cl\$/g, '<span class="font-mono font-semibold">Dcr ≥ Cl</span>')
+                .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1 / $2)')
+                .replace(/\\times/g, '×')
+                .replace(/\\sqrt\{2\}/g, '√2')
+                .replace(/\\mathbf\{([^}]+)\}/g, '<b>$1</b>')
+                .replace(/\\text\{([^}]+)\}/g, '$1')
+                .replace(/\$/g, '');
+        }
+
+        // 一鍵複製結果
+        function copyResultText() {
+            const textarea = document.createElement('textarea');
+            textarea.value = lastSummaryText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('已複製查詢結果至剪貼簿');
+            } catch (err) {
+                showToast('複製失敗，請手動選取複製');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+            }, 2500);
+        }
+
+        // 頁面載入後立即執行一次預設計算 (預設 3000m)
+        window.onload = function () {
+            calculate();
+        };
+    </script>
+</body>
+</html>
