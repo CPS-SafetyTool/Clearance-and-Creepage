@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UL 1778 / 60950-1 安規絕緣間距快速查詢工具 (SOP v10)</title>
+    <title>UL 1778 / 60950-1 安規絕緣間距快速查詢工具 (SOP v11)</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 Google Fonts: Inter 與 Noto Sans TC -->
@@ -36,7 +36,7 @@
                 </div>
                 <div>
                     <h1 class="text-base sm:text-lg font-bold tracking-tight">安規絕緣間距快速查詢工具</h1>
-                    <p class="text-xs text-slate-400">UL 1778 5th / UL 60950-1 2nd (SOP v10 規範)</p>
+                    <p class="text-xs text-slate-400">UL 1778 5th / UL 60950-1 2nd (SOP v11 規範)</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -119,8 +119,8 @@
                         <label for="ov-cat" class="block text-xs font-semibold text-slate-700 mb-1">過電壓類別 (Overvoltage Category - Table G.1)</label>
                         <select id="ov-cat" onchange="calculate()" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none">
                             <option value="1">Category I (特殊保護設備)</option>
-                            <option value="2" selected>Category II (一般插電式 UPS 預設)</option>
-                            <option value="3">Category III (配電盤/固定式設備)</option>
+                            <option value="2" selected>Category II (單相電預設)</option>
+                            <option value="3">Category III (三相電預設 / 配電盤設備)</option>
                             <option value="4">Category IV (建築物進線端)</option>
                         </select>
                     </div>
@@ -299,7 +299,7 @@
                     <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
                         <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
                             <span class="w-2 h-5 bg-indigo-500 rounded-full"></span>
-                            3. 判定過程與邏輯拆解 (SOP v10 Step-by-Step)
+                            3. 判定過程與邏輯拆解 (SOP v11 Step-by-Step)
                         </h2>
                         <span class="text-xs text-slate-400">依 UL 1778 / 60950-1 條款自動推導</span>
                     </div>
@@ -315,7 +315,7 @@
 
     <!-- 頁尾 -->
     <footer class="bg-white border-t border-slate-200 mt-10 py-4 text-center text-xs text-slate-500">
-        依據 UL 1778 5th / UL 60950-1 2nd / IEC 60664-1 安規標準作業程序 (SOP v10) 建置 • 僅供工程設計快速查詢參考
+        依據 UL 1778 5th / UL 60950-1 2nd / IEC 60664-1 安規標準作業程序 (SOP v11) 建置 • 僅供工程設計快速查詢參考
     </footer>
 
     <!-- 訊息提示框 (Toast) -->
@@ -527,17 +527,22 @@
             const btn3 = document.getElementById('btn-phase-3');
             const input1 = document.getElementById('single-phase-input');
             const input3 = document.getElementById('three-phase-input');
+            const ovCatSelect = document.getElementById('ov-cat');
 
             if (phase === 'single') {
                 btn1.className = 'py-1.5 px-2.5 rounded-md text-xs font-semibold transition shadow-sm bg-white text-blue-700 cursor-pointer';
                 btn3.className = 'py-1.5 px-2.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer';
                 input1.classList.remove('hidden');
                 input3.classList.add('hidden');
+                // SOP v11: 單相電預設 Overvoltage Category II
+                ovCatSelect.value = '2';
             } else {
                 btn3.className = 'py-1.5 px-2.5 rounded-md text-xs font-semibold transition shadow-sm bg-white text-blue-700 cursor-pointer';
                 btn1.className = 'py-1.5 px-2.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer';
                 input3.classList.remove('hidden');
                 input1.classList.add('hidden');
+                // SOP v11: 三相電預設 Overvoltage Category III
+                ovCatSelect.value = '3';
             }
             calculate();
         }
@@ -569,7 +574,7 @@
         }
 
         function resetDefaults() {
-            setCircuitType('primary');
+            currentCircuit = 'primary';
             setPhaseType('single');
             document.getElementById('ac-mains').value = 230;
             document.getElementById('ac-mains-3p').value = '230/400';
@@ -583,460 +588,457 @@
             document.getElementById('qc-program').checked = false;
             document.getElementById('coated-pcb').checked = false;
             calculate();
-            showToast('已恢復為 SOP 預設參數 (單相 230V / 海拔 3000m)');
+            showToast('已重設為 SOP v11 預設參數 (海拔 3000m)');
         }
 
-        // 無條件進位至下一個 0.1 mm (避免浮點數誤差如 2.3000000000000003 進位成 2.4)
+        // 無條件進位至下一個 0.1 mm 增量 (修正浮點數精度問題)
         function roundUp01(val) {
-            const cleaned = Math.round(val * 10000) / 10000;
-            return Math.ceil(cleaned * 10) / 10;
+            if (val <= 0) return 0;
+            return Math.ceil(Math.round(val * 10000) / 1000) / 10;
         }
 
         function formatMM(val) {
-            return val.toFixed(1);
+            return Number(val).toFixed(1);
         }
 
         // =========================================================================
-        // 3. 核心查表與插值演算法
+        // 3. SOP v11 核心查表與計算演算法
         // =========================================================================
 
-        // 計算海拔修正倍率 (Table A.2 + 線性插值)
+        // 查 Table G.1: AC Mains Transient Voltage
+        function getMainsTransient(acMainsRms, ovCat) {
+            let rowIdx = 0;
+            if (acMainsRms <= 50) rowIdx = 0;
+            else if (acMainsRms <= 100) rowIdx = 1;
+            else if (acMainsRms <= 150) rowIdx = 2;
+            else if (acMainsRms <= 300) rowIdx = 3;
+            else rowIdx = 4;
+
+            const matrix = [
+                [330, 500, 800, 1500],
+                [500, 800, 1500, 2500],
+                [800, 1500, 2500, 4000],
+                [1500, 2500, 4000, 6000],
+                [2500, 4000, 6000, 8000]
+            ];
+            return matrix[rowIdx][ovCat - 1];
+        }
+
+        // 查 Table A.2: 海拔修正倍率 (含線性插值)
         function getAltitudeFactor(alt) {
-            if (alt <= 2000) return { factor: 1.00, note: '海拔 ≤ 2000m，無需高海拔修正 (倍率 1.00)' };
+            if (alt <= 2000) return { factor: 1.00, note: '海拔 ≤ 2000m，無需海拔修正 (倍率 1.00x)' };
             for (let i = 0; i < TABLE_A2.length - 1; i++) {
                 const [a1, f1] = TABLE_A2[i];
                 const [a2, f2] = TABLE_A2[i + 1];
-                if (alt === a1) return { factor: f1, note: `直接對照 Table A.2 (${a1}m → ${f1.toFixed(2)})` };
-                if (alt === a2) return { factor: f2, note: `直接對照 Table A.2 (${a2}m → ${f2.toFixed(2)})` };
+                if (alt === a1) return { factor: f1, note: `直接對照 Table A.2 (${a1}m → ${f1.toFixed(2)}x)` };
+                if (alt === a2) return { factor: f2, note: `直接對照 Table A.2 (${a2}m → ${f2.toFixed(2)}x)` };
                 if (alt > a1 && alt < a2) {
                     const f = f1 + ((alt - a1) / (a2 - a1)) * (f2 - f1);
                     return {
                         factor: f,
-                        note: `線性插值於 ${a1}m (${f1}) 與 ${a2}m (${f2}) 之間：${f1} + ((${alt}-${a1})/(${a2}-${a1})) × (${f2}-${f1}) = ${f.toFixed(4)}`
+                        note: `線性插值計算 (${a1}m=${f1}x ~ ${a2}m=${f2}x)：${f1} + ((${alt}-${a1})/(${a2}-${a1})) × (${f2}-${f1}) = ${f.toFixed(4)}x`
                     };
                 }
             }
-            return { factor: 14.5, note: '超過 20000m 上限，採用最高倍率 14.5' };
+            const last = TABLE_A2[TABLE_A2.length - 1];
+            return { factor: last[1], note: `超出 Table A.2 上限，取最大值 ${last[1]}x` };
         }
 
-        // 查詢 Table G.1 市電瞬態電壓
-        function getMainsTransient(acMains, ovCat) {
-            const catIdx = ovCat - 1; // 0: Cat I, 1: Cat II, 2: Cat III, 3: Cat IV
-            if (acMains <= 50)  return [330, 500, 800, 1500][catIdx];
-            if (acMains <= 100) return [500, 800, 1500, 2500][catIdx];
-            if (acMains <= 150) return [800, 1500, 2500, 4000][catIdx];
-            if (acMains <= 300) return [1500, 2500, 4000, 6000][catIdx];
-            return [2500, 4000, 6000, 8000][catIdx];
-        }
-
-        // 查詢 Table 2K 基礎間距 (SOP v8 完整支援 F, B/S, R 與 PD1&2 / PD3)
-        function lookupTable2K(voltage, transient, pd, isQC) {
-            const row = TABLE_2K.find(r => voltage <= r[0]) || TABLE_2K[TABLE_2K.length - 1];
+        // 查 Table 2K (Primary Clearance Base, SOP v8 完整欄位)
+        function lookupTable2K(voltagePeak, transientV, pd, isQC) {
+            let row = TABLE_2K[TABLE_2K.length - 1];
+            for (let r of TABLE_2K) {
+                if (voltagePeak <= r[0]) {
+                    row = r;
+                    break;
+                }
+            }
             const isPD3 = (pd === '3');
-            let fVal, bsVal, rVal;
-
-            if (transient <= 1500) {
-                if (!isPD3) {
-                    fVal  = row[1];
-                    bsVal = isQC ? row[3] : row[2];
-                    rVal  = isQC ? row[5] : row[4];
-                } else {
-                    fVal  = row[6];
-                    bsVal = isQC ? row[8] : row[7];
-                    rVal  = isQC ? row[10] : row[9];
-                }
-            } else if (transient <= 2500) {
-                if (!isPD3) {
-                    fVal  = row[11];
-                    bsVal = isQC ? row[13] : row[12];
-                    rVal  = isQC ? row[15] : row[14];
-                } else {
-                    fVal  = row[16];
-                    bsVal = isQC ? row[18] : row[17];
-                    rVal  = isQC ? row[20] : row[19];
-                }
+            let baseIdx = 1; // 預設 1500V PD1&2
+            if (transientV <= 1500) {
+                baseIdx = isPD3 ? 6 : 1;
+            } else if (transientV <= 2500) {
+                baseIdx = isPD3 ? 16 : 11;
             } else {
-                // 4000V (PD 1, 2 & 3 共用)
-                fVal  = row[21];
-                bsVal = isQC ? row[23] : row[22];
-                rVal  = isQC ? row[25] : row[24];
+                baseIdx = 21; // 4000V PD 1, 2 & 3 相同
             }
 
-            return { rowVoltage: row[0], f: fVal, bs: bsVal, r: rVal };
+            const funcVal = row[baseIdx];
+            const bsVal = isQC ? row[baseIdx + 2] : row[baseIdx + 1];
+            const rVal = isQC ? row[baseIdx + 4] : row[baseIdx + 3];
+
+            return {
+                tier: row[0],
+                func: funcVal,
+                bs: bsVal,
+                r: rVal
+            };
         }
 
-        // 查詢 Table G.2 (當瞬態 > 4000V 時)
-        function lookupTableG2(transient, pd) {
-            const row = TABLE_G2.find(r => transient <= r[0]) || TABLE_G2[TABLE_G2.length - 1];
+        // 查 Table G.2 (當 Transient > 4000V 時)
+        function lookupTableG2(withstandV, pd) {
+            let row = TABLE_G2[TABLE_G2.length - 1];
+            for (let r of TABLE_G2) {
+                if (withstandV <= r[0]) {
+                    row = r;
+                    break;
+                }
+            }
             const pdIdx = pd === '1' ? 0 : (pd === '2' ? 1 : 2);
             const bs = row[1 + pdIdx];
             const r = row[4 + pdIdx];
-            return { rowTransient: row[0], f: bs, bs, r };
+            return { tier: row[0], func: bs, bs: bs, r: r };
         }
 
-        // 查詢 Table 2L 附加間距 (條件 B2)
-        function lookupTable2L(upk, transient, pd, isQC) {
-            if (transient === 1500) {
-                const vCol = (pd === '3') ? (isQC ? 3 : 2) : (isQC ? 1 : 0);
-                // 篩選出該欄位有數值的列
-                const validRows = TABLE_2L_1500.filter(r => r[vCol] !== null);
-                const lastRow = validRows[validRows.length - 1];
-                const prevRow = validRows[validRows.length - 2];
-
-                if (upk <= validRows[0][vCol]) {
-                    return { addBS: 0.0, addR: 0.0, note: `實測 $U_{pk}$ (${upk}V) ≤ ${validRows[0][vCol]}V，附加間距為 0.0 mm` };
-                }
+        // 查 Table 2L (Primary Additional Clearance, 僅適用條件 B2)
+        function lookupTable2L(upk, transientV, pd, isQC) {
+            if (transientV === 1500) {
+                const colIdx = (pd === '3') ? (isQC ? 3 : 2) : (isQC ? 1 : 0);
+                const validRows = TABLE_2L_1500.filter(r => r[colIdx] !== null);
                 for (let r of validRows) {
-                    if (upk <= r[vCol]) {
-                        return { addBS: r[4], addR: r[5], note: `對照 Table 2L (1500V 瞬態) 階層 ≤ ${r[vCol]}V：附加 B/S = ${r[4].toFixed(1)} mm, R = ${r[5].toFixed(1)} mm` };
+                    if (upk <= r[colIdx]) {
+                        return { addBS: r[4], addR: r[5], note: `對照 Table 2L Part 1 (≤ ${r[colIdx]}V 階層)` };
                     }
                 }
                 // 線性外推法
-                const vStep = lastRow[vCol] - prevRow[vCol];
-                const extraSteps = Math.ceil((upk - lastRow[vCol]) / vStep);
-                const addBS = Math.round((lastRow[4] + extraSteps * 0.1) * 10) / 10;
-                const addR = Math.round((lastRow[5] + extraSteps * 0.2) * 10) / 10;
-                return {
-                    addBS,
-                    addR,
-                    note: `超過表列上限 ${lastRow[vCol]}V，依 SOP 執行線性外推 (每 +${vStep}V 增加 0.1/0.2mm)：附加 B/S = ${addBS.toFixed(1)} mm, R = ${addR.toFixed(1)} mm`
-                };
-            } else if (transient === 2500) {
-                const vCol = isQC ? 1 : 0;
-                const validRows = TABLE_2L_2500.filter(r => r[vCol] !== null);
-                const lastRow = validRows[validRows.length - 1];
-                const prevRow = validRows[validRows.length - 2];
-
-                if (upk <= validRows[0][vCol]) {
-                    return { addBS: 0.0, addR: 0.0, note: `實測 $U_{pk}$ (${upk}V) ≤ ${validRows[0][vCol]}V，附加間距為 0.0 mm` };
-                }
+                const rLast = validRows[validRows.length - 1];
+                const rPrev = validRows[validRows.length - 2];
+                const slopeBS = (rLast[4] - rPrev[4]) / (rLast[colIdx] - rPrev[colIdx]);
+                const slopeR = (rLast[5] - rPrev[5]) / (rLast[colIdx] - rPrev[colIdx]);
+                const extraBS = roundUp01(rLast[4] + (upk - rLast[colIdx]) * slopeBS);
+                const extraR = roundUp01(rLast[5] + (upk - rLast[colIdx]) * slopeR);
+                return { addBS: extraBS, addR: extraR, note: `超過 Table 2L Part 1 最高電壓 (${rLast[colIdx]}V)，依 SOP 採用線性外推計算` };
+            } else if (transientV === 2500) {
+                const colIdx = isQC ? 1 : 0;
+                const validRows = TABLE_2L_2500.filter(r => r[colIdx] !== null);
                 for (let r of validRows) {
-                    if (upk <= r[vCol]) {
-                        return { addBS: r[2], addR: r[3], note: `對照 Table 2L (2500V 瞬態) 階層 ≤ ${r[vCol]}V：附加 B/S = ${r[2].toFixed(1)} mm, R = ${r[3].toFixed(1)} mm` };
+                    if (upk <= r[colIdx]) {
+                        return { addBS: r[2], addR: r[3], note: `對照 Table 2L Part 2 (≤ ${r[colIdx]}V 階層)` };
                     }
                 }
-                // 線性外推法
-                const vStep = lastRow[vCol] - prevRow[vCol];
-                const extraSteps = Math.ceil((upk - lastRow[vCol]) / vStep);
-                const addBS = Math.round((lastRow[2] + extraSteps * 0.1) * 10) / 10;
-                const addR = Math.round((lastRow[3] + extraSteps * 0.2) * 10) / 10;
-                return {
-                    addBS,
-                    addR,
-                    note: `超過表列上限 ${lastRow[vCol]}V，依 SOP 執行線性外推 (每 +${vStep}V 增加 0.1/0.2mm)：附加 B/S = ${addBS.toFixed(1)} mm, R = ${addR.toFixed(1)} mm`
-                };
+                const rLast = validRows[validRows.length - 1];
+                const rPrev = validRows[validRows.length - 2];
+                const slopeBS = (rLast[2] - rPrev[2]) / (rLast[colIdx] - rPrev[colIdx]);
+                const slopeR = (rLast[3] - rPrev[3]) / (rLast[colIdx] - rPrev[colIdx]);
+                const extraBS = roundUp01(rLast[2] + (upk - rLast[colIdx]) * slopeBS);
+                const extraR = roundUp01(rLast[3] + (upk - rLast[colIdx]) * slopeR);
+                return { addBS: extraBS, addR: extraR, note: `超過 Table 2L Part 2 最高電壓 (${rLast[colIdx]}V)，依 SOP 採用線性外推計算` };
             }
-            return { addBS: 0.0, addR: 0.0, note: '此瞬態等級無需 Table 2L 附加間距' };
+            return { addBS: 0, addR: 0, note: '瞬態電壓為 4000V，不適用 Table 2L 附加間距' };
         }
 
-        // 查詢 Table 2M (二次電路)
+        // 查 Table 2M (Secondary Clearances)
         function lookupTable2M(upk, secTransient, isQC) {
-            const row = TABLE_2M.find(r => upk <= r[0]) || TABLE_2M[TABLE_2M.length - 1];
-            let bs, r;
+            let row = TABLE_2M[TABLE_2M.length - 1];
+            for (let r of TABLE_2M) {
+                if (upk <= r[0]) {
+                    row = r;
+                    break;
+                }
+            }
+            let bs = 0, r = 0;
             if (secTransient <= 71) {
                 bs = row[1]; r = row[2];
             } else if (secTransient <= 800) {
                 bs = isQC ? row[4] : row[3];
-                r  = isQC ? row[6] : row[5];
+                r = isQC ? row[6] : row[5];
             } else if (secTransient <= 1500) {
                 bs = isQC ? row[8] : row[7];
-                r  = isQC ? row[10] : row[9];
+                r = isQC ? row[10] : row[9];
             } else {
                 bs = isQC ? row[12] : row[11];
-                r  = isQC ? row[14] : row[13];
+                r = isQC ? row[14] : row[13];
             }
-            return { rowVoltage: row[0], f: bs, bs, r };
+            return { tier: row[0], func: bs, bs: bs, r: r };
         }
 
-        // 查詢 Table 2N 沿面距離並執行線性插值與進位
+        // 查 Table 2N: 沿面距離 (含線性插值與加強絕緣先乘2再進位規則)
         function lookupCreepage(urms, pd, matGroup) {
-            // 決定欄位索引
-            // [Urms, PD1_F(1), PD1_BS(2), PD2_PCB(3), PD2_I(4), PD2_II(5), PD2_III(6), PD3_I(7), PD3_II(8), PD3_IIIa(9), PD3_IIIb(10)]
-            let colF, colBS;
-            let colDesc = '';
-
+            let colIdx = 6; // 預設 PD 2 Group IIIa/IIIb
             if (pd === '1') {
-                colF = 1;
-                colBS = 2;
-                colDesc = 'PD 1 (全材料組別)';
+                colIdx = 2; // PD 1 Basic/Supp
             } else if (pd === '2') {
-                if (matGroup === 'PCB') {
-                    colF = 3; colBS = 3;
-                    colDesc = 'PD 2 / PCB 裸板';
-                } else if (matGroup === 'I') {
-                    colF = 4; colBS = 4;
-                    colDesc = 'PD 2 / Group I';
-                } else if (matGroup === 'II') {
-                    colF = 5; colBS = 5;
-                    colDesc = 'PD 2 / Group II';
-                } else {
-                    colF = 6; colBS = 6;
-                    colDesc = `PD 2 / Group ${matGroup}`;
-                }
-            } else {
-                // PD 3 (若誤選 PCB 裸板則自動轉為 Group IIIb 評估)
-                if (matGroup === 'I') {
-                    colF = 7; colBS = 7;
-                    colDesc = 'PD 3 / Group I';
-                } else if (matGroup === 'II') {
-                    colF = 8; colBS = 8;
-                    colDesc = 'PD 3 / Group II';
-                } else if (matGroup === 'IIIa') {
-                    colF = 9; colBS = 9;
-                    colDesc = 'PD 3 / Group IIIa';
-                } else {
-                    colF = 10; colBS = 10;
-                    colDesc = matGroup === 'PCB' ? 'PD 3 / Group IIIb (PD3 不適用 PCB 裸板減免，自動以 IIIb 評估)' : 'PD 3 / Group IIIb';
-                }
+                if (matGroup === 'PCB') colIdx = 3;
+                else if (matGroup === 'I') colIdx = 4;
+                else if (matGroup === 'II') colIdx = 5;
+                else colIdx = 6; // IIIa / IIIb
+            } else if (pd === '3') {
+                if (matGroup === 'I') colIdx = 7;
+                else if (matGroup === 'II') colIdx = 8;
+                else if (matGroup === 'IIIa') colIdx = 9;
+                else colIdx = 10; // IIIb (若選 PCB 在 PD3 則自動歸入 IIIb)
             }
 
             if (urms <= TABLE_2N[0][0]) {
-                const fRaw = TABLE_2N[0][colF];
-                const bsRaw = TABLE_2N[0][colBS];
+                const baseBS = TABLE_2N[0][colIdx];
+                const baseF = (pd === '1') ? TABLE_2N[0][1] : baseBS;
                 return {
-                    funcReq: roundUp01(fRaw),
-                    basicReq: roundUp01(bsRaw),
-                    reinfReq: roundUp01(bsRaw * 2),
-                    note: `實測 $U_{rms}$ (${urms}V) ≤ 10V，直接取 Table 2N (${colDesc}) 最低階層值：F = ${fRaw}mm, B/S = ${bsRaw}mm`
+                    funcReq: roundUp01(baseF),
+                    basicReq: roundUp01(baseBS),
+                    reinfReq: roundUp01(baseBS * 2),
+                    rawBasic: baseBS,
+                    note: `對照 Table 2N 最低階層 (≤ ${TABLE_2N[0][0]}V)：基本查表值 = ${baseBS} mm`
                 };
             }
 
             for (let i = 0; i < TABLE_2N.length; i++) {
-                const row = TABLE_2N[i];
-                if (urms === row[0]) {
-                    const fRaw = row[colF];
-                    const bsRaw = row[colBS];
+                const u2 = TABLE_2N[i][0];
+                const d2 = TABLE_2N[i][colIdx];
+                const f2 = (pd === '1') ? TABLE_2N[i][1] : d2;
+
+                if (urms === u2) {
+                    const reqF = roundUp01(f2);
+                    const reqBS = roundUp01(d2);
+                    const reqR = roundUp01(d2 * 2);
                     return {
-                        funcReq: roundUp01(fRaw),
-                        basicReq: roundUp01(bsRaw),
-                        reinfReq: roundUp01(bsRaw * 2),
-                        note: `實測 $U_{rms}$ (${urms}V) 恰好符合 Table 2N (${colDesc}) ${row[0]}V 階層：B/S 查表值 = ${bsRaw} mm，進位後為 ${roundUp01(bsRaw).toFixed(1)} mm；強化絕緣先乘 2 (${(bsRaw * 2).toFixed(2)} mm) 後進位 = ${roundUp01(bsRaw * 2).toFixed(1)} mm。`
+                        funcReq: reqF,
+                        basicReq: reqBS,
+                        reinfReq: reqR,
+                        rawBasic: d2,
+                        note: `精準命中 Table 2N 階層 (${u2}V)：基本絕緣 = ${d2} mm → 進位後 ${reqBS} mm；加強絕緣 = ${d2} × 2 = ${(d2 * 2).toFixed(2)} mm → 進位後 ${reqR} mm`
                     };
                 }
-                if (urms < row[0] && i > 0) {
-                    const prev = TABLE_2N[i - 1];
-                    const u1 = prev[0], u2 = row[0];
-                    const f1 = prev[colF], f2 = row[colF];
-                    const b1 = prev[colBS], b2 = row[colBS];
 
-                    const ratio = (urms - u1) / (u2 - u1);
-                    const fCalc = f1 + ratio * (f2 - f1);
-                    const bCalc = b1 + ratio * (b2 - b1);
-                    const rCalc = bCalc * 2;
+                if (urms < u2 && i > 0) {
+                    const u1 = TABLE_2N[i - 1][0];
+                    const d1 = TABLE_2N[i - 1][colIdx];
+                    const f1 = (pd === '1') ? TABLE_2N[i - 1][1] : d1;
 
-                    const funcReq = roundUp01(fCalc);
-                    const basicReq = roundUp01(bCalc);
-                    const reinfReq = roundUp01(rCalc);
+                    const interpBS = d1 + ((urms - u1) / (u2 - u1)) * (d2 - d1);
+                    const interpF = f1 + ((urms - u1) / (u2 - u1)) * (f2 - f1);
+
+                    const reqF = roundUp01(interpF);
+                    const reqBS = roundUp01(interpBS);
+                    const reqR = roundUp01(interpBS * 2); // SOP 4.3: 先乘以 2，再進位至下一個 0.1 mm
 
                     return {
-                        funcReq,
-                        basicReq,
-                        reinfReq,
-                        note: `介於 Table 2N (${colDesc}) ${u1}V (${b1}mm) 與 ${u2}V (${b2}mm) 之間，執行線性插值：<br>` +
-                              `• 基本絕緣插值：$Dcr_{basic} = ${b1} + \\frac{${urms}-${u1}}{${u2}-${u1}} \\times (${b2}-${b1}) = ${bCalc.toFixed(3)}\\text{ mm}$ → 進位至 0.1mm 得 <b>${basicReq.toFixed(1)} mm</b><br>` +
-                              `• 強化絕緣先乘 2 再進位：$${bCalc.toFixed(3)} \\times 2 = ${rCalc.toFixed(3)}\\text{ mm}$ → 進位至 0.1mm 得 <b>${reinfReq.toFixed(1)} mm</b>`
+                        funcReq: reqF,
+                        basicReq: reqBS,
+                        reinfReq: reqR,
+                        rawBasic: interpBS,
+                        note: `介於 Table 2N <b>${u1}V (${d1}mm)</b> 與 <b>${u2}V (${d2}mm)</b> 之間，執行線性插值：<br>` +
+                              `• 基本絕緣插值：$Dcr_{basic} = ${d1} + \\frac{${urms} - ${u1}}{${u2} - ${u1}} \\times (${d2} - ${d1}) = ${interpBS.toFixed(4)}\\text{ mm}$ → 無條件進位至 0.1mm = <b>${reqBS.toFixed(1)} mm</b><br>` +
+                              `• 加強絕緣計算（先乘 2 再進位）：$${interpBS.toFixed(4)} \\times 2 = ${(interpBS * 2).toFixed(4)}\\text{ mm}$ → 無條件進位至 0.1mm = <b>${reqR.toFixed(1)} mm</b>`
                     };
                 }
             }
 
-            const maxRow = TABLE_2N[TABLE_2N.length - 1];
+            const last = TABLE_2N[TABLE_2N.length - 1];
+            const dLast = last[colIdx];
             return {
-                funcReq: roundUp01(maxRow[colF]),
-                basicReq: roundUp01(maxRow[colBS]),
-                reinfReq: roundUp01(maxRow[colBS] * 2),
-                note: `超過 Table 2N 最高電壓階層 63000V，採用最大表列值。`
+                funcReq: roundUp01(dLast),
+                basicReq: roundUp01(dLast),
+                reinfReq: roundUp01(dLast * 2),
+                rawBasic: dLast,
+                note: `超出 Table 2N 最高電壓，取最大階層 (${last[0]}V) = ${dLast} mm`
             };
         }
 
+        // 查 Table 2Q: Coated PCB
+        function lookupTable2Q(upk) {
+            for (let r of TABLE_2Q) {
+                if (upk <= r[0]) {
+                    return { tier: r[0], fbs: r[1], r: r[2] };
+                }
+            }
+            const last = TABLE_2Q[TABLE_2Q.length - 1];
+            return { tier: last[0], fbs: last[1], r: last[2] };
+        }
+
         // =========================================================================
-        // 4. 主計算與渲染引擎
+        // 4. 主計算與邏輯推導渲染函式
         // =========================================================================
         function calculate() {
             const ovCat = parseInt(document.getElementById('ov-cat').value) || 2;
             const secTransient = parseInt(document.getElementById('sec-transient').value) || 1500;
-            const upk = parseFloat(document.getElementById('u-pk').value) || 0;
-            const urms = parseFloat(document.getElementById('u-rms').value) || 0;
-            const altitude = parseFloat(document.getElementById('altitude').value) || 2000;
+            const upk = Math.max(0, parseFloat(document.getElementById('u-pk').value) || 0);
+            const urms = Math.max(0, parseFloat(document.getElementById('u-rms').value) || 0);
+            const altitude = Math.max(0, parseFloat(document.getElementById('altitude').value) || 0);
             const pd = document.getElementById('pollution-degree').value;
             const matGroup = document.getElementById('material-group').value;
             const isQC = document.getElementById('qc-program').checked;
-            const isCoated = document.getElementById('coated-pcb').checked;
+            const isCoatedPCB = document.getElementById('coated-pcb').checked;
 
-            // 取得 AC Mains 評估基準電壓 (區分單相與三相)
-            let acMains = 0;
+            // 取得 AC Mains 評估基準電壓 (區分單相與三相系統)
+            let acMains = 230;
             let phaseSystemDesc = '';
-            let phaseRuleDesc = '';
-
             if (currentPhase === 'single') {
-                acMains = parseFloat(document.getElementById('ac-mains').value) || 0;
-                phaseSystemDesc = `單相電系統 (${acMains} V rms)`;
-                phaseRuleDesc = `單相 AC 市電額定電壓為 <b>${acMains} V rms</b>`;
+                acMains = Math.max(1, parseFloat(document.getElementById('ac-mains').value) || 230);
+                phaseSystemDesc = `單相電系統 (${acMains} Vrms)`;
             } else {
                 const sysKey = document.getElementById('ac-mains-3p').value;
                 const sysInfo = THREE_PHASE_SYSTEMS[sysKey] || THREE_PHASE_SYSTEMS['230/400'];
                 acMains = sysInfo.acMainsEval;
-                phaseSystemDesc = `三相電系統 ${sysKey} V (基準 ${acMains} V)`;
-                phaseRuleDesc = `選擇 <b>${sysInfo.label}</b>；${sysInfo.ruleNote}`;
-                document.getElementById('three-phase-rule-hint').textContent = sysInfo.ruleNote;
+                phaseSystemDesc = `${sysInfo.label} → 取 ${acMains} Vrms`;
+                document.getElementById('three-phase-rule-hint').textContent = `依 SOP v11：${sysInfo.ruleNote}`;
             }
 
-            // 計算市電峰值
+            // 更新市電峰值與海拔倍率即時徽章
             const mainsPeak = acMains * Math.SQRT2;
-            document.getElementById('mains-peak-badge').textContent = `峰值: ${mainsPeak.toFixed(1)} V`;
-            document.getElementById('mains-peak-badge-3p').textContent = `基準 ${acMains}V | 峰值 ${mainsPeak.toFixed(1)}V`;
+            document.getElementById('mains-peak-badge').textContent = `峰值: ${mainsPeak.toFixed(1)} Vpk`;
+            const badge3p = document.getElementById('mains-peak-badge-3p');
+            if (badge3p) {
+                badge3p.textContent = `計算基準: ${acMains}V / 峰值 ${mainsPeak.toFixed(1)}V`;
+            }
 
-            // 計算海拔倍率
             const altInfo = getAltitudeFactor(altitude);
             document.getElementById('alt-factor-badge').textContent = `倍率: ${altInfo.factor.toFixed(2)}x`;
 
-            const steps = [];
-            const alerts = [];
+            let steps = [];
+            let alerts = [];
 
             let clBaseF = 0, clBaseBS = 0, clBaseR = 0;
+            let clReqF = 0, clReqBS = 0, clReqR = 0;
+            let dcrFinalF = 0, dcrFinalBS = 0, dcrFinalR = 0;
             let transientLabel = '';
 
-            // ---------------------------------------------------------------------
-            // 步驟 A：空間間距基準值 (Cl_base) 判定
-            // ---------------------------------------------------------------------
-            if (isCoated) {
-                // Table 2Q 塗層 PCB 模式
-                const row2Q = TABLE_2Q.find(r => upk <= r[0]) || TABLE_2Q[TABLE_2Q.length - 1];
-                clBaseF = row2Q[1];
-                clBaseBS = row2Q[1];
-                clBaseR = row2Q[2];
-                transientLabel = '塗層 PCB (Table 2Q)';
+            // 檢查塗層 PCB 特殊模式
+            if (isCoatedPCB) {
+                const qRes = lookupTable2Q(upk);
+                clBaseF = clBaseBS = qRes.fbs;
+                clBaseR = qRes.r;
 
-                steps.push({
-                    title: '步驟 1：塗層 PCB 分離距離評估 (SOP 5.1 / Table 2Q)',
-                    content: `已勾選符合 UL 746C 防潮塗層 PCB 條件，直接依據峰值工作電壓 $U_{pk} = ${upk}\\text{ V}$ 對照 <b>Table 2Q</b> (階層 ≤ ${row2Q[0]}V)：<br>` +
-                             `功能/基本絕緣最小分離距離 = <b>${clBaseBS.toFixed(1)} mm</b>，強化絕緣 = <b>${clBaseR.toFixed(1)} mm</b>。`
-                });
-            } else if (currentCircuit === 'primary') {
-                // 一次電路 SOP 3.1
-                const transient = getMainsTransient(acMains, ovCat);
-                transientLabel = `瞬態 ${transient}V`;
+                clReqF = roundUp01(clBaseF * altInfo.factor);
+                clReqBS = roundUp01(clBaseBS * altInfo.factor);
+                clReqR = roundUp01(clBaseR * altInfo.factor);
 
-                steps.push({
-                    title: '步驟 1：單相/三相電源系統與市電瞬態過電壓判定 (SOP 2 & Table G.1)',
-                    content: `${phaseRuleDesc}<br>` +
-                             `換算 AC MAINS SUPPLY 峰值 $U_{a.c.\\,mains\\,peak} = ${acMains} \\times \\sqrt{2} = \\mathbf{${mainsPeak.toFixed(1)}\\text{ V}}$。<br>` +
-                             `對照 <b>Table G.1</b> (AC 市電級距 ${acMains}V, Overvoltage Category ${['I','II','III','IV'][ovCat-1]})，查得市電瞬態電壓為 <b>${transient} V peak</b>。`
-                });
-
-                if (transient > 4000) {
-                    // 條件 A
-                    const resG2 = lookupTableG2(transient, pd);
-                    clBaseF = resG2.f;
-                    clBaseBS = resG2.bs;
-                    clBaseR = resG2.r;
-
-                    steps.push({
-                        title: '步驟 2：一次電路空間間距基準判定 — 【條件 A】(SOP 3.1)',
-                        content: `由於市電瞬態電壓 (${transient}V) <b>大於 4000V</b>，符合<b>條件 A</b>。<br>` +
-                                 `依 SOP 規範對照 <b>Table G.2</b> (耐受電壓 ${(transient/1000).toFixed(1)} kV, PD ${pd})，取得基準空間間距 $Cl_{base}$：` +
-                                 `功能 (F) = <b>${clBaseF.toFixed(1)} mm</b>，基本/補充 (B/S) = <b>${clBaseBS.toFixed(1)} mm</b>，強化 (R) = <b>${clBaseR.toFixed(1)} mm</b>。`
-                    });
-                } else if (acMains <= 300) {
-                    // 條件 B
-                    const res2K = lookupTable2K(mainsPeak, transient, pd, isQC);
-                    if (upk <= mainsPeak) {
-                        // 情況 B1
-                        clBaseF = res2K.f;
-                        clBaseBS = res2K.bs;
-                        clBaseR = res2K.r;
-
-                        steps.push({
-                            title: '步驟 2：一次電路空間間距基準判定 — 【條件 B1】(SOP 3.1)',
-                            content: `市電瞬態電壓 (${transient}V) ≤ 4000V 且市電額定 (${acMains}V) ≤ 300V rms，符合<b>條件 B</b>。<br>` +
-                                     `實測峰值工作電壓 $U_{pk}$ (${upk}V) ≤ 市電峰值 (${mainsPeak.toFixed(1)}V)，屬<b>情況 B1</b>（無需加算 Table 2L）。<br>` +
-                                     `一律以市電峰值 <b>${mainsPeak.toFixed(1)} V</b> 查詢 <b>Table 2K</b> (階層 ≤ ${res2K.rowVoltage}V, PD ${pd}${isQC ? ', 含 Annex R.2 品管減免' : ''})：<br>` +
-                                     `• 功能絕緣 $Cl_{base(F)}$ = <b>${clBaseF.toFixed(1)} mm</b><br>` +
-                                     `• 基本/補充 $Cl_{base(B/S)}$ = <b>${clBaseBS.toFixed(1)} mm</b><br>` +
-                                     `• 強化絕緣 $Cl_{base(R)}$ = <b>${clBaseR.toFixed(1)} mm</b>`
-                        });
-                    } else {
-                        // 情況 B2
-                        const res2L = lookupTable2L(upk, transient, pd, isQC);
-                        clBaseF = Math.round((res2K.f + res2L.addBS) * 10) / 10;
-                        clBaseBS = Math.round((res2K.bs + res2L.addBS) * 10) / 10;
-                        clBaseR = Math.round((res2K.r + res2L.addR) * 10) / 10;
-
-                        steps.push({
-                            title: '步驟 2：一次電路空間間距基準判定 — 【條件 B2】(SOP 3.1 & Table 2L)',
-                            content: `市電瞬態電壓 (${transient}V) ≤ 4000V 且市電額定 (${acMains}V) ≤ 300V rms，符合<b>條件 B</b>。<br>` +
-                                     `實測峰值工作電壓 $U_{pk}$ (<b>${upk} V</b>) <b>大於</b> 市電峰值 (${mainsPeak.toFixed(1)}V)，觸發<b>情況 B2</b>：<br>` +
-                                     `1. 先以市電峰值 ${mainsPeak.toFixed(1)}V 查 <b>Table 2K</b> (≤ ${res2K.rowVoltage}V)：F = ${res2K.f.toFixed(1)}mm, B/S = ${res2K.bs.toFixed(1)}mm, R = ${res2K.r.toFixed(1)}mm。<br>` +
-                                     `2. 再以實測 $U_{pk}$ = ${upk}V 查 <b>Table 2L</b>：${res2L.note}。<br>` +
-                                     `3. 兩者相加得基準空間間距 $Cl_{base}$：F = <b>${clBaseF.toFixed(1)} mm</b>，B/S = <b>${clBaseBS.toFixed(1)} mm</b>，R = <b>${clBaseR.toFixed(1)} mm</b>。`
-                        });
-                    }
-                } else {
-                    // 條件 C (acMains > 300V 且 transient <= 4000V)
-                    const res2K = lookupTable2K(mainsPeak, transient, pd, isQC);
-                    clBaseF = res2K.f;
-                    clBaseBS = res2K.bs;
-                    clBaseR = res2K.r;
-
-                    steps.push({
-                        title: '步驟 2：一次電路空間間距基準判定 — 【條件 C】(SOP 3.1)',
-                        content: `市電瞬態電壓 (${transient}V) ≤ 4000V 且市電額定 (${acMains}V) <b>大於 300V rms</b>，符合<b>條件 C</b>。<br>` +
-                                 `依 SOP 規範：以市電峰值 <b>${mainsPeak.toFixed(1)} V</b> 查詢 <b>Table 2K</b> (階層 ≤ ${res2K.rowVoltage}V)，且<b>無需加算 Table 2L 附加間距</b>：<br>` +
-                                 `• 功能絕緣 $Cl_{base(F)}$ = <b>${clBaseF.toFixed(1)} mm</b><br>` +
-                                 `• 基本/補充 $Cl_{base(B/S)}$ = <b>${clBaseBS.toFixed(1)} mm</b><br>` +
-                                 `• 強化絕緣 $Cl_{base(R)}$ = <b>${clBaseR.toFixed(1)} mm</b>`
-                    });
-                }
-            } else {
-                // 二次電路 SOP 3.2
-                const res2M = lookupTable2M(upk, secTransient, isQC);
-                clBaseF = res2M.f;
-                clBaseBS = res2M.bs;
-                clBaseR = res2M.r;
-                transientLabel = `二次瞬態 ≤${secTransient}V`;
-
-                steps.push({
-                    title: '步驟 1 & 2：二次電路空間間距判定 (SOP 3.2 / Table 2M)',
-                    content: `依據實測峰值工作電壓 $U_{pk} = ${upk}\\text{ V}$ (階層 ≤ ${res2M.rowVoltage}V) 與二次側瞬態過電壓範圍 (≤ ${secTransient}V peak)，對照 <b>Table 2M</b>：<br>` +
-                             `取得基準空間間距 $Cl_{base}$：功能/基本/補充 = <b>${clBaseBS.toFixed(1)} mm</b>，強化絕緣 = <b>${clBaseR.toFixed(1)} mm</b>。`
-                });
-            }
-
-            // ---------------------------------------------------------------------
-            // 步驟 B：高海拔修正與 0.1mm 無條件進位 (SOP 3.3 / Table A.2)
-            // ---------------------------------------------------------------------
-            const rawAltF = clBaseF * altInfo.factor;
-            const rawAltBS = clBaseBS * altInfo.factor;
-            const rawAltR = clBaseR * altInfo.factor;
-
-            const clReqF = roundUp01(rawAltF);
-            const clReqBS = roundUp01(rawAltBS);
-            const clReqR = roundUp01(rawAltR);
-
-            steps.push({
-                title: `步驟 3：高海拔修正與無條件進位計算 (SOP 3.3 / Table A.2 — ${altitude}m)`,
-                content: `${altInfo.note}。僅針對<b>空間間距 (Cl)</b> 乘以海拔倍率並無條件進位至下一個 0.1 mm：<br>` +
-                         `• 功能絕緣：$Cl_{req(F)} = ${clBaseF.toFixed(1)} \\times ${altInfo.factor.toFixed(2)} = ${rawAltF.toFixed(3)}\\text{ mm}$ → 進位後為 <b>${clReqF.toFixed(1)} mm</b><br>` +
-                         `• 基本/補充：$Cl_{req(B/S)} = ${clBaseBS.toFixed(1)} \\times ${altInfo.factor.toFixed(2)} = ${rawAltBS.toFixed(3)}\\text{ mm}$ → 進位後為 <b>${clReqBS.toFixed(1)} mm</b><br>` +
-                         `• 強化絕緣：$Cl_{req(R)} = ${clBaseR.toFixed(1)} \\times ${altInfo.factor.toFixed(2)} = ${rawAltR.toFixed(3)}\\text{ mm}$ → 進位後為 <b>${clReqR.toFixed(1)} mm</b>`
-            });
-
-            // ---------------------------------------------------------------------
-            // 步驟 C：沿面距離查詢、插值與 Dcr >= Cl 強制規則 (SOP 4)
-            // ---------------------------------------------------------------------
-            let dcrFinalF, dcrFinalBS, dcrFinalR;
-
-            if (isCoated) {
                 dcrFinalF = clReqF;
                 dcrFinalBS = clReqBS;
                 dcrFinalR = clReqR;
+                transientLabel = '塗層 PCB (Table 2Q)';
+
                 steps.push({
-                    title: '步驟 4：沿面距離與最終檢核 (塗層 PCB 模式)',
-                    content: `塗層 PCB 依 Table 2Q 評估最小分離距離（已包含高海拔空間間距修正檢核），最終要求與空間間距一致。`
+                    title: '步驟 1：防潮塗層 PCB 評估模式 (SOP 5.1 / Table 2Q)',
+                    content: `已勾選符合 UL 746C 防潮塗層 PCB 與品質控制計畫。依據峰值工作電壓 $U_{pk} = ${upk}\\text{ V}$ 查得 Table 2Q（≤ ${qRes.tier}V 階層）基準分離距離：<br>` +
+                             `• 功能 / 基本 / 補充絕緣基準 = <b>${qRes.fbs} mm</b>；強化絕緣基準 = <b>${qRes.r} mm</b>`
+                });
+
+                steps.push({
+                    title: '步驟 2：高海拔修正與進位計算 (SOP 3.3 / Table A.2)',
+                    content: `宣告海拔 <b>${altitude} m</b>，${altInfo.note}。<br>` +
+                             `• 功能 / 基本絕緣：$${qRes.fbs} \\times ${altInfo.factor.toFixed(4)} = ${(qRes.fbs * altInfo.factor).toFixed(3)}\\text{ mm}$ → 無條件進位 = <b>${clReqF.toFixed(1)} mm</b><br>` +
+                             `• 強化絕緣：$${qRes.r} \\times ${altInfo.factor.toFixed(4)} = ${(qRes.r * altInfo.factor).toFixed(3)}\\text{ mm}$ → 無條件進位 = <b>${clReqR.toFixed(1)} mm</b>`
                 });
             } else {
-                const creepInfo = lookupCreepage(urms, pd, matGroup);
+                // 標準空間間距 (Clearance) 計算流程
+                if (currentCircuit === 'primary') {
+                    const mainsTransient = getMainsTransient(acMains, ovCat);
+                    transientLabel = `瞬態: ${mainsTransient}V`;
 
-                // 強制規則：Dcr 不得小於最終要求之 Cl (SOP 4.3)
+                    const catNames = ['Category I', 'Category II', 'Category III', 'Category IV'];
+                    const phaseDetailText = currentPhase === 'single'
+                        ? `電源系統為<b>單相電</b>，交流市電額定電壓 = <b>${acMains} Vrms</b>`
+                        : `電源系統為<b>三相電 (${THREE_PHASE_SYSTEMS[document.getElementById('ac-mains-3p').value].label})</b>，${THREE_PHASE_SYSTEMS[document.getElementById('ac-mains-3p').value].ruleNote}`;
+
+                    steps.push({
+                        title: '步驟 1：確認電源系統、市電峰值與瞬態過電壓 (SOP 2 / Table G.1)',
+                        content: `${phaseDetailText}，計算市電峰值 $U_{a.c.\\,mains\\,peak} = ${acMains} \\times \\sqrt{2} = \\mathbf{${mainsPeak.toFixed(1)}\\text{ V peak}}$。<br>` +
+                                 `對照 <b>Table G.1</b>（市電對地級距 ${acMains} Vrms，${catNames[ovCat - 1]}），查得市電瞬態電壓 = <b>${mainsTransient} V peak</b>。`
+                    });
+
+                    // 三分法判定 (條件 A / B / C)
+                    if (mainsTransient > 4000) {
+                        // 條件 A
+                        const g2Res = lookupTableG2(Math.max(mainsTransient, upk), pd);
+                        clBaseF = g2Res.func;
+                        clBaseBS = g2Res.bs;
+                        clBaseR = g2Res.r;
+
+                        steps.push({
+                            title: '步驟 2：一次電路空間間距基準判定 — 條件 A (SOP 3.1)',
+                            content: `因市電瞬態電壓 (<b>${mainsTransient}V</b>) <b>大於 4000V</b>，符合<b>條件 A</b>。<br>` +
+                                     `依標準對照 Table G.2 / 耐受電壓階層 (≤ ${g2Res.tier}V, PD ${pd})，取得基準空間間距 $Cl_{base}$：<br>` +
+                                     `• 功能絕緣 $Cl_{base(F)}$ = <b>${clBaseF} mm</b> | 基本絕緣 $Cl_{base(B/S)}$ = <b>${clBaseBS} mm</b> | 強化絕緣 $Cl_{base(R)}$ = <b>${clBaseR} mm</b>`
+                        });
+                    } else if (acMains <= 300) {
+                        // 條件 B
+                        const t2k = lookupTable2K(mainsPeak, mainsTransient, pd, isQC);
+                        if (upk <= mainsPeak) {
+                            // 情況 B1
+                            clBaseF = t2k.func;
+                            clBaseBS = t2k.bs;
+                            clBaseR = t2k.r;
+                            steps.push({
+                                title: '步驟 2：一次電路空間間距基準判定 — 條件 B1 (SOP 3.1 / Table 2K)',
+                                content: `瞬態電壓 (${mainsTransient}V) ≤ 4000V 且市電 (${acMains}V) ≤ 300V，實測峰值 $U_{pk}$ (${upk}V) ≤ 市電峰值 (${mainsPeak.toFixed(1)}V)，符合<b>情況 B1</b>。<br>` +
+                                         `一律使用<b>市電峰值 (${mainsPeak.toFixed(1)}V)</b> 查詢 <b>Table 2K</b>（≤ ${t2k.tier}V 階層，PD ${pd}${isQC ? '，含品管減免' : ''}）：<br>` +
+                                         `• 功能絕緣 $Cl_{base(F)}$ = <b>${clBaseF} mm</b> | 基本絕緣 $Cl_{base(B/S)}$ = <b>${clBaseBS} mm</b> | 強化絕緣 $Cl_{base(R)}$ = <b>${clBaseR} mm</b>`
+                            });
+                        } else {
+                            // 情況 B2
+                            const t2l = lookupTable2L(upk, mainsTransient, pd, isQC);
+                            clBaseF = roundUp01(t2k.func + t2l.addBS);
+                            clBaseBS = roundUp01(t2k.bs + t2l.addBS);
+                            clBaseR = roundUp01(t2k.r + t2l.addR);
+                            steps.push({
+                                title: '步驟 2：一次電路空間間距基準判定 — 條件 B2 加算附加間距 (SOP 3.1 / Table 2K + 2L)',
+                                content: `瞬態電壓 (${mainsTransient}V) ≤ 4000V 且市電 (${acMains}V) ≤ 300V，但實測峰值 $U_{pk}$ (<b>${upk}V</b>) <b>大於</b>市電峰值 (${mainsPeak.toFixed(1)}V)，符合<b>情況 B2</b>：<br>` +
+                                         `1. 先以市電峰值 (${mainsPeak.toFixed(1)}V) 查 <b>Table 2K</b> (≤ ${t2k.tier}V, PD ${pd})：功能 = <b>${t2k.func} mm</b>，基本 = <b>${t2k.bs} mm</b>，強化 = <b>${t2k.r} mm</b>。<br>` +
+                                         `2. 再以實測 $U_{pk}$ (${upk}V) 查 <b>Table 2L</b> (${t2l.note})：功能/基本附加 = <b>+${t2l.addBS} mm</b>，強化附加 = <b>+${t2l.addR} mm</b>。<br>` +
+                                         `3. 相加取得基準空間間距：功能 $Cl_{base(F)}$ = <b>${clBaseF} mm</b> | 基本 $Cl_{base(B/S)}$ = <b>${clBaseBS} mm</b> | 強化 $Cl_{base(R)}$ = <b>${clBaseR} mm</b>`
+                            });
+                        }
+                    } else {
+                        // 條件 C (acMains > 300V 且 transient <= 4000V)
+                        const t2k = lookupTable2K(mainsPeak, mainsTransient, pd, isQC);
+                        clBaseF = t2k.func;
+                        clBaseBS = t2k.bs;
+                        clBaseR = t2k.r;
+                        steps.push({
+                            title: '步驟 2：一次電路空間間距基準判定 — 條件 C (SOP 3.1 / Table 2K)',
+                            content: `瞬態電壓 (${mainsTransient}V) ≤ 4000V 且市電 (<b>${acMains}V</b>) <b>大於 300V</b>，符合<b>條件 C</b>。<br>` +
+                                     `一律以<b>市電峰值 (${mainsPeak.toFixed(1)}V)</b> 查詢 <b>Table 2K</b>（≤ ${t2k.tier}V 階層，PD ${pd}，且無需加算 Table 2L）：<br>` +
+                                     `• 功能絕緣 $Cl_{base(F)}$ = <b>${clBaseF} mm</b> | 基本絕緣 $Cl_{base(B/S)}$ = <b>${clBaseBS} mm</b> | 強化絕緣 $Cl_{base(R)}$ = <b>${clBaseR} mm</b>`
+                        });
+                    }
+                } else {
+                    // 二次電路 (Table 2M)
+                    transientLabel = `二次瞬態: ≤${secTransient}V`;
+                    const t2m = lookupTable2M(upk, secTransient, isQC);
+                    clBaseF = t2m.func;
+                    clBaseBS = t2m.bs;
+                    clBaseR = t2m.r;
+
+                    steps.push({
+                        title: '步驟 1 & 2：二次電路空間間距基準查詢 (SOP 3.2 / Table 2M)',
+                        content: `評估二次電路，最高瞬態過電壓範圍為 <b>≤ ${secTransient}V</b>，實測峰值工作電壓 $U_{pk}$ = <b>${upk}V</b>。<br>` +
+                                 `對照 <b>Table 2M</b>（≤ ${t2m.tier}V 階層${isQC ? '，含品管減免' : ''}）取得基準空間間距：<br>` +
+                                 `• 功能 / 基本 / 補充絕緣 $Cl_{base(F, B/S)}$ = <b>${clBaseBS} mm</b> | 強化絕緣 $Cl_{base(R)}$ = <b>${clBaseR} mm</b>`
+                    });
+                }
+
+                // 步驟 3：高海拔修正與進位
+                const rawClF = clBaseF * altInfo.factor;
+                const rawClBS = clBaseBS * altInfo.factor;
+                const rawClR = clBaseR * altInfo.factor;
+
+                clReqF = roundUp01(rawClF);
+                clReqBS = roundUp01(rawClBS);
+                clReqR = roundUp01(rawClR);
+
+                steps.push({
+                    title: '步驟 3：高海拔修正倍率與無條件進位計算 (SOP 3.3 / Table A.2)',
+                    content: `操作海拔 <b>${altitude} m</b>，${altInfo.note}。<br>` +
+                             `• 功能絕緣：$Cl_{req(F)} = ${clBaseF} \\times ${altInfo.factor.toFixed(4)} = ${rawClF.toFixed(3)}\\text{ mm}$ → 無條件進位至 0.1mm = <b>${clReqF.toFixed(1)} mm</b><br>` +
+                             `• 基本絕緣：$Cl_{req(B/S)} = ${clBaseBS} \\times ${altInfo.factor.toFixed(4)} = ${rawClBS.toFixed(3)}\\text{ mm}$ → 無條件進位至 0.1mm = <b>${clReqBS.toFixed(1)} mm</b><br>` +
+                             `• 強化絕緣：$Cl_{req(R)} = ${clBaseR} \\times ${altInfo.factor.toFixed(4)} = ${rawClR.toFixed(3)}\\text{ mm}$ → 無條件進位至 0.1mm = <b>${clReqR.toFixed(1)} mm</b>`
+                });
+
+                // 步驟 4：沿面距離 (Creepage) 計算
+                // SOP v11 步驟 4.1：若實測工作電壓的 Vrms 小於 AC mains supply，則直接使用 AC mains supply 的 Vrms 值進行查表
+                const isPrimary = (currentCircuit === 'primary');
+                const useMainsCreepage = isPrimary && (urms < acMains);
+                const urmsLookup = useMainsCreepage ? acMains : urms;
+
+                const creepInfo = lookupCreepage(urmsLookup, pd, matGroup);
+
+                const lookupRuleDesc = isPrimary
+                    ? (useMainsCreepage
+                        ? `⚠️ <b>觸發 SOP v11 步驟 4.1 查表電壓下限規則</b>：實測均方根工作電壓 (${urms} Vrms) <b>小於</b> AC Mains 額定電壓 (${acMains} Vrms)，依規定強制改用市電電壓 <b>${urmsLookup} Vrms</b> 作為 Table 2N 查表基準。<br>`
+                        : `實測均方根工作電壓 (${urms} Vrms) ≥ AC Mains 額定電壓 (${acMains} Vrms)，直接以實測值 <b>${urmsLookup} Vrms</b> 查詢 Table 2N。<br>`)
+                    : `依據全波形均方根電壓 <b>${urmsLookup} Vrms</b> 查詢 Table 2N。<br>`;
+
+                // 強制規則：Dcr 不得小於最終要求之 Cl (SOP 4.4)
                 dcrFinalF = Math.max(creepInfo.funcReq, clReqF);
                 dcrFinalBS = Math.max(creepInfo.basicReq, clReqBS);
                 dcrFinalR = Math.max(creepInfo.reinfReq, clReqR);
@@ -1048,24 +1050,24 @@
                 let bumpNote = '';
                 if (bumpedF || bumpedBS || bumpedR) {
                     bumpNote = `<div class="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-xs">` +
-                               `<b>⚠️ 觸發 SOP 4.3 強制規則 ($Dcr \\ge Cl$)：</b>因高海拔修正後之空間間距大於 Table 2N 沿面距離查表值，沿面距離已自動強制提升至等於空間間距 (` +
+                               `<b>⚠️ 觸發 SOP 4.4 強制規則 ($Dcr \\ge Cl$)：</b>因高海拔修正後之空間間距大於 Table 2N 沿面距離查表值，沿面距離已自動強制提升至等於空間間距 (` +
                                [
                                    bumpedF ? `功能: ${creepInfo.funcReq.toFixed(1)}→${dcrFinalF.toFixed(1)}mm` : '',
                                    bumpedBS ? `基本: ${creepInfo.basicReq.toFixed(1)}→${dcrFinalBS.toFixed(1)}mm` : '',
                                    bumpedR ? `強化: ${creepInfo.reinfReq.toFixed(1)}→${dcrFinalR.toFixed(1)}mm` : ''
                                ].filter(Boolean).join('；') + `)。</div>`;
                 } else {
-                    bumpNote = `<div class="mt-1.5 text-xs text-emerald-700">✓ 檢核 SOP 4.3 規則：沿面距離均已大於或等於空間間距 ($Dcr \\ge Cl$)，無需額外提升。</div>`;
+                    bumpNote = `<div class="mt-1.5 text-xs text-emerald-700">✓ 檢核 SOP 4.4 規則：沿面距離均已大於或等於空間間距 ($Dcr \\ge Cl$)，無需額外提升。</div>`;
                 }
 
                 steps.push({
-                    title: '步驟 4：沿面距離查表、線性插值與 $Dcr \\ge Cl$ 檢核 (SOP 4.1 ~ 4.3 / Table 2N)',
-                    content: `依據全波形均方根電壓 $U_{rms} = ${urms}\\text{ V}$ 查詢 <b>Table 2N</b>（注意：沿面距離<b>不乘以</b>海拔倍率）：<br>` +
+                    title: '步驟 4：沿面距離查表、線性插值與 $Dcr \\ge Cl$ 檢核 (SOP 4.1 ~ 4.4 / Table 2N)',
+                    content: `${lookupRuleDesc}（注意：沿面距離<b>不乘以</b>海拔倍率）<br>` +
                              `${creepInfo.note}${bumpNote}`
                 });
 
                 // 檢查 PD3 + Group IIIb + Urms > 630V 警告
-                if (pd === '3' && (matGroup === 'IIIb' || matGroup === 'PCB') && urms > 630) {
+                if (pd === '3' && (matGroup === 'IIIb' || matGroup === 'PCB') && urmsLookup > 630) {
                     alerts.push('注意：依據 SOP Table 2N 附註，Material Group IIIb 不建議應用於 Pollution Degree 3 且 Urms > 630V 之環境。');
                 }
             }
@@ -1106,8 +1108,8 @@
             // 儲存純文字摘要供一鍵複製
             const circuitStr = currentCircuit === 'primary' ? `一次電路 (${phaseSystemDesc}, Cat ${['I','II','III','IV'][ovCat-1]})` : `二次電路 (瞬態 ≤${secTransient}V)`;
             lastSummaryText =
-                `【UL 1778 / 60950-1 安規絕緣間距查詢結果 (SOP v10)】\n` +
-                `條件：${circuitStr} | Upk=${upk}V, Urms=${urms}V | 海拔=${altitude}m (${altInfo.factor.toFixed(2)}x) | PD ${pd} / Group ${matGroup}\n` +
+                `【UL 1778 / 60950-1 安規絕緣間距查詢結果 (SOP v11)】\n` +
+                `條件：${circuitStr} | Upk=${upk}Vpk, Urms=${urms}Vrms | 海拔=${altitude}m (${altInfo.factor.toFixed(2)}x) | PD ${pd} / Group ${matGroup}\n` +
                 `--------------------------------------------------\n` +
                 `1. 功能絕緣 (Functional)       : Cl = ${formatMM(clReqF)} mm | Dcr = ${formatMM(dcrFinalF)} mm\n` +
                 `2. 基本/補充絕緣 (Basic/Supp.) : Cl = ${formatMM(clReqBS)} mm | Dcr = ${formatMM(dcrFinalBS)} mm\n` +
