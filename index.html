@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UL 1778 / 60950-1 安規絕緣間距快速查詢工具 (SOP v11)</title>
+    <title>UL 1778 / 60950-1 安規絕緣間距快速查詢工具 (SOP v14)</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 Google Fonts: Inter 與 Noto Sans TC -->
@@ -36,7 +36,7 @@
                 </div>
                 <div>
                     <h1 class="text-base sm:text-lg font-bold tracking-tight">安規絕緣間距快速查詢工具</h1>
-                    <p class="text-xs text-slate-400">UL 1778 5th / UL 60950-1 2nd (SOP v11 規範)</p>
+                    <p class="text-xs text-slate-400">UL 1778 5th / UL 60950-1 2nd (SOP v14 規範)</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -77,26 +77,52 @@
 
                 <!-- 一次電路專屬設定：AC 市電與過電壓類別 -->
                 <div id="primary-settings" class="space-y-4 bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80">
-                    <!-- 單相 / 三相選擇 -->
+                    <!-- 單相 / 三相選擇 (僅保留單相電與三相電兩個標籤) -->
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1.5">交流電源相數 (Phase System)</label>
                         <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-200/70 rounded-lg">
-                            <button type="button" id="btn-phase-1" onclick="setPhaseType('single')" class="py-1.5 px-2.5 rounded-md text-xs font-semibold transition shadow-sm bg-white text-blue-700 cursor-pointer">
+                            <button type="button" id="btn-phase-1" onclick="setPhaseType('single')" class="py-1.5 px-3 rounded-md text-xs font-semibold transition shadow-sm bg-white text-blue-700 cursor-pointer">
                                 單相電 (Single-Phase)
                             </button>
-                            <button type="button" id="btn-phase-3" onclick="setPhaseType('three')" class="py-1.5 px-2.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer">
+                            <button type="button" id="btn-phase-3" onclick="setPhaseType('three')" class="py-1.5 px-3 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer">
                                 三相電 (Three-Phase)
                             </button>
                         </div>
                     </div>
 
-                    <!-- 單相電輸入欄位 -->
-                    <div id="single-phase-input">
-                        <div class="flex justify-between items-center mb-1">
-                            <label for="ac-mains" class="text-xs font-semibold text-slate-700">交流市電額定電壓 AC Mains (Vrms)</label>
-                            <span id="mains-peak-badge" class="text-[11px] font-mono bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">峰值: 325.3 Vpk</span>
+                    <!-- 單相電區塊 (含 Split-Phase 雙火線勾選框) -->
+                    <div id="single-phase-section" class="space-y-3">
+                        <label class="flex items-center gap-2.5 p-2.5 rounded-lg bg-white border border-slate-200/90 cursor-pointer select-none hover:border-blue-300 transition">
+                            <input type="checkbox" id="is-split-phase" onchange="toggleSplitPhase()" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer">
+                            <div>
+                                <span class="text-xs font-bold text-slate-800 block">Split-Phase (雙火線 / Single Phase, 3-Wire)</span>
+                                <span class="text-[11px] text-slate-500 block">勾選後對地基準為 120V（Table G.1 強制查 100~150V 列）</span>
+                            </div>
+                        </label>
+
+                        <!-- 一般單相 2-Wire 輸入欄位 -->
+                        <div id="single-2w-input">
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="ac-mains" class="text-xs font-semibold text-slate-700">交流市電額定電壓 AC Mains (Vrms)</label>
+                                <span id="mains-peak-badge" class="text-[11px] font-mono bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">峰值: 325.3 Vpk</span>
+                            </div>
+                            <input type="number" id="ac-mains" value="230" min="1" max="600" step="1" oninput="calculate()" placeholder="請輸入單相額定電壓 (Vrms)" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
                         </div>
-                        <input type="number" id="ac-mains" value="230" min="1" max="600" step="1" oninput="calculate()" placeholder="請輸入單相額定電壓 (Vrms)" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+
+                        <!-- 單相 Split-Phase (雙火線) 設定欄位 -->
+                        <div id="split-phase-input" class="hidden space-y-2.5">
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <label for="ac-mains-split-rms" class="text-xs font-semibold text-slate-700">實際輸入額定電壓 AC Mains (Vrms)</label>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-[11px] font-mono bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded">G.1 對地: 120V</span>
+                                        <span id="mains-peak-badge-split" class="text-[11px] font-mono bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">2K 峰值: 339.4 Vpk</span>
+                                    </div>
+                                </div>
+                                <input type="number" id="ac-mains-split-rms" value="240" min="1" max="600" step="1" oninput="calculate()" placeholder="請輸入實際輸入額定電壓 (如 208 或 240)" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none">
+                                <p class="text-[11px] text-slate-500 mt-1">依 SOP v14：Table G.1 強制查 100~150V 列；Table 2K 一律以此實際輸入 RMS 換算峰值查詢。</p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- 三相電下拉選單 -->
@@ -299,7 +325,7 @@
                     <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
                         <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
                             <span class="w-2 h-5 bg-indigo-500 rounded-full"></span>
-                            3. 判定過程與邏輯拆解 (SOP v11 Step-by-Step)
+                            3. 判定過程與邏輯拆解 (SOP v14 Step-by-Step)
                         </h2>
                         <span class="text-xs text-slate-400">依 UL 1778 / 60950-1 條款自動推導</span>
                     </div>
@@ -315,7 +341,7 @@
 
     <!-- 頁尾 -->
     <footer class="bg-white border-t border-slate-200 mt-10 py-4 text-center text-xs text-slate-500">
-        依據 UL 1778 5th / UL 60950-1 2nd / IEC 60664-1 安規標準作業程序 (SOP v11) 建置 • 僅供工程設計快速查詢參考
+        依據 UL 1778 5th / UL 60950-1 2nd / IEC 60664-1 安規標準作業程序 (SOP v14) 建置 • 僅供工程設計快速查詢參考
     </footer>
 
     <!-- 訊息提示框 (Toast) -->
@@ -517,7 +543,7 @@
             '400/690': {
                 label: '400/690 V 三相四線制 (Wye)',
                 acMainsEval: 400,
-                ruleNote: '三相四線 Wye 系統，依 SOP v10 取相對中性線電壓 (400 V) 作為 AC MAINS SUPPLY 查詢基準。'
+                ruleNote: '三相四線 Wye 系統，依 SOP v14 取相對中性線電壓 (400 V) 作為 AC MAINS SUPPLY 查詢基準。'
             }
         };
 
@@ -525,25 +551,33 @@
             currentPhase = phase;
             const btn1 = document.getElementById('btn-phase-1');
             const btn3 = document.getElementById('btn-phase-3');
-            const input1 = document.getElementById('single-phase-input');
+            const singleSection = document.getElementById('single-phase-section');
             const input3 = document.getElementById('three-phase-input');
             const ovCatSelect = document.getElementById('ov-cat');
 
-            if (phase === 'single') {
-                btn1.className = 'py-1.5 px-2.5 rounded-md text-xs font-semibold transition shadow-sm bg-white text-blue-700 cursor-pointer';
-                btn3.className = 'py-1.5 px-2.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer';
-                input1.classList.remove('hidden');
-                input3.classList.add('hidden');
-                // SOP v11: 單相電預設 Overvoltage Category II
-                ovCatSelect.value = '2';
-            } else {
-                btn3.className = 'py-1.5 px-2.5 rounded-md text-xs font-semibold transition shadow-sm bg-white text-blue-700 cursor-pointer';
-                btn1.className = 'py-1.5 px-2.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer';
-                input3.classList.remove('hidden');
-                input1.classList.add('hidden');
-                // SOP v11: 三相電預設 Overvoltage Category III
+            const activeCls = 'py-1.5 px-3 rounded-md text-xs font-semibold transition shadow-sm bg-white text-blue-700 cursor-pointer';
+            const inactiveCls = 'py-1.5 px-3 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer';
+
+            btn1.className = (phase === 'single') ? activeCls : inactiveCls;
+            btn3.className = (phase === 'three') ? activeCls : inactiveCls;
+
+            singleSection.classList.toggle('hidden', phase !== 'single');
+            input3.classList.toggle('hidden', phase !== 'three');
+
+            if (phase === 'three') {
+                // SOP v14: 三相電預設 Overvoltage Category III
                 ovCatSelect.value = '3';
+            } else {
+                // SOP v14: 單相電 (含一般單相與 Split-Phase) 預設 Overvoltage Category II
+                ovCatSelect.value = '2';
             }
+            calculate();
+        }
+
+        function toggleSplitPhase() {
+            const isSplit = document.getElementById('is-split-phase').checked;
+            document.getElementById('single-2w-input').classList.toggle('hidden', isSplit);
+            document.getElementById('split-phase-input').classList.toggle('hidden', !isSplit);
             calculate();
         }
 
@@ -575,7 +609,11 @@
 
         function resetDefaults() {
             currentCircuit = 'primary';
+            document.getElementById('is-split-phase').checked = false;
+            document.getElementById('single-2w-input').classList.remove('hidden');
+            document.getElementById('split-phase-input').classList.add('hidden');
             setPhaseType('single');
+            document.getElementById('ac-mains-split-rms').value = 240;
             document.getElementById('ac-mains').value = 230;
             document.getElementById('ac-mains-3p').value = '230/400';
             document.getElementById('ov-cat').value = '2';
@@ -588,7 +626,7 @@
             document.getElementById('qc-program').checked = false;
             document.getElementById('coated-pcb').checked = false;
             calculate();
-            showToast('已重設為 SOP v11 預設參數 (海拔 3000m)');
+            showToast('已重設為 SOP v14 預設參數 (海拔 3000m)');
         }
 
         // 無條件進位至下一個 0.1 mm 增量 (修正浮點數精度問題)
@@ -854,28 +892,43 @@
             const upk = Math.max(0, parseFloat(document.getElementById('u-pk').value) || 0);
             const urms = Math.max(0, parseFloat(document.getElementById('u-rms').value) || 0);
             const altitude = Math.max(0, parseFloat(document.getElementById('altitude').value) || 0);
-            const pd = document.getElementById('pollution-degree').value;
-            const matGroup = document.getElementById('material-group').value;
+            const pd = document.getElementById('pollution-degree').value || '2';
+            const matGroup = document.getElementById('material-group').value || 'IIIb';
             const isQC = document.getElementById('qc-program').checked;
             const isCoatedPCB = document.getElementById('coated-pcb').checked;
+            const isSplitPhase = document.getElementById('is-split-phase').checked;
 
-            // 取得 AC Mains 評估基準電壓 (區分單相與三相系統)
-            let acMains = 230;
+            // 取得 AC Mains 評估基準電壓 (區分單相 2-Wire、單相 Split-Phase 3-Wire 與三相系統)
+            let acMains = 230;       // 用於計算市電峰值 (Table 2K) 與沿面距離下限之實際輸入 RMS
+            let acMainsG1 = 230;     // 用於查詢 Table G.1 瞬態電壓之對地/相電壓基準
             let phaseSystemDesc = '';
+
             if (currentPhase === 'single') {
-                acMains = Math.max(1, parseFloat(document.getElementById('ac-mains').value) || 230);
-                phaseSystemDesc = `單相電系統 (${acMains} Vrms)`;
+                if (isSplitPhase) {
+                    acMains = Math.max(1, parseFloat(document.getElementById('ac-mains-split-rms').value) || 240);
+                    acMainsG1 = 120; // SOP v14: Split-Phase (雙火線 / 3-Wire) 對地為 120V，Table G.1 強制對應 > 100V <= 150V 列
+                    phaseSystemDesc = `單相電 Split-Phase 雙火線 (實際輸入 ${acMains} Vrms / Table G.1 對地 120 Vrms)`;
+                } else {
+                    acMains = Math.max(1, parseFloat(document.getElementById('ac-mains').value) || 230);
+                    acMainsG1 = acMains;
+                    phaseSystemDesc = `單相電 Single Phase, 2-Wire (${acMains} Vrms)`;
+                }
             } else {
                 const sysKey = document.getElementById('ac-mains-3p').value;
                 const sysInfo = THREE_PHASE_SYSTEMS[sysKey] || THREE_PHASE_SYSTEMS['230/400'];
                 acMains = sysInfo.acMainsEval;
+                acMainsG1 = acMains;
                 phaseSystemDesc = `${sysInfo.label} → 取 ${acMains} Vrms`;
-                document.getElementById('three-phase-rule-hint').textContent = `依 SOP v11：${sysInfo.ruleNote}`;
+                document.getElementById('three-phase-rule-hint').textContent = `依 SOP v14：${sysInfo.ruleNote}`;
             }
 
             // 更新市電峰值與海拔倍率即時徽章
             const mainsPeak = acMains * Math.SQRT2;
             document.getElementById('mains-peak-badge').textContent = `峰值: ${mainsPeak.toFixed(1)} Vpk`;
+            const badgeSplit = document.getElementById('mains-peak-badge-split');
+            if (badgeSplit) {
+                badgeSplit.textContent = `2K 峰值: ${mainsPeak.toFixed(1)} Vpk`;
+            }
             const badge3p = document.getElementById('mains-peak-badge-3p');
             if (badge3p) {
                 badge3p.textContent = `計算基準: ${acMains}V / 峰值 ${mainsPeak.toFixed(1)}V`;
@@ -922,18 +975,25 @@
             } else {
                 // 標準空間間距 (Clearance) 計算流程
                 if (currentCircuit === 'primary') {
-                    const mainsTransient = getMainsTransient(acMains, ovCat);
+                    const mainsTransient = getMainsTransient(acMainsG1, ovCat);
                     transientLabel = `瞬態: ${mainsTransient}V`;
 
                     const catNames = ['Category I', 'Category II', 'Category III', 'Category IV'];
-                    const phaseDetailText = currentPhase === 'single'
-                        ? `電源系統為<b>單相電</b>，交流市電額定電壓 = <b>${acMains} Vrms</b>`
-                        : `電源系統為<b>三相電 (${THREE_PHASE_SYSTEMS[document.getElementById('ac-mains-3p').value].label})</b>，${THREE_PHASE_SYSTEMS[document.getElementById('ac-mains-3p').value].ruleNote}`;
+                    let phaseDetailText = '';
+                    if (currentPhase === 'single') {
+                        if (isSplitPhase) {
+                            phaseDetailText = `電源系統為<b>單相電 Split-Phase (雙火線 / 3-Wire)</b>（對地 <b>120 Vrms</b>，Table G.1 一律對應查詢 <b>「over 100 V up to and including 150 V」</b> 列）。依 SOP v14 規定，查詢 Table 2K 時以實際輸入之 AC Mains 額定電壓 <b>${acMains} Vrms</b> 換算峰值`;
+                        } else {
+                            phaseDetailText = `電源系統為<b>單相電 (Single Phase, 2-Wire)</b>，實際輸入 AC Mains 額定電壓 = <b>${acMains} Vrms</b>`;
+                        }
+                    } else {
+                        phaseDetailText = `電源系統為<b>三相電 (${THREE_PHASE_SYSTEMS[document.getElementById('ac-mains-3p').value].label})</b>，${THREE_PHASE_SYSTEMS[document.getElementById('ac-mains-3p').value].ruleNote}`;
+                    }
 
                     steps.push({
                         title: '步驟 1：確認電源系統、市電峰值與瞬態過電壓 (SOP 2 / Table G.1)',
                         content: `${phaseDetailText}，計算市電峰值 $U_{a.c.\\,mains\\,peak} = ${acMains} \\times \\sqrt{2} = \\mathbf{${mainsPeak.toFixed(1)}\\text{ V peak}}$。<br>` +
-                                 `對照 <b>Table G.1</b>（市電對地級距 ${acMains} Vrms，${catNames[ovCat - 1]}），查得市電瞬態電壓 = <b>${mainsTransient} V peak</b>。`
+                                 `對照 <b>Table G.1</b>（市電對地/相級距 ${acMainsG1} Vrms，${catNames[ovCat - 1]}），查得市電瞬態電壓 = <b>${mainsTransient} V peak</b>。`
                     });
 
                     // 三分法判定 (條件 A / B / C)
@@ -1108,7 +1168,7 @@
             // 儲存純文字摘要供一鍵複製
             const circuitStr = currentCircuit === 'primary' ? `一次電路 (${phaseSystemDesc}, Cat ${['I','II','III','IV'][ovCat-1]})` : `二次電路 (瞬態 ≤${secTransient}V)`;
             lastSummaryText =
-                `【UL 1778 / 60950-1 安規絕緣間距查詢結果 (SOP v11)】\n` +
+                `【UL 1778 / 60950-1 安規絕緣間距查詢結果 (SOP v14)】\n` +
                 `條件：${circuitStr} | Upk=${upk}Vpk, Urms=${urms}Vrms | 海拔=${altitude}m (${altInfo.factor.toFixed(2)}x) | PD ${pd} / Group ${matGroup}\n` +
                 `--------------------------------------------------\n` +
                 `1. 功能絕緣 (Functional)       : Cl = ${formatMM(clReqF)} mm | Dcr = ${formatMM(dcrFinalF)} mm\n` +
