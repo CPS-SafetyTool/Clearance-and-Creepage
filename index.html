@@ -1160,7 +1160,7 @@
             const breakdownEl = document.getElementById('logic-breakdown');
             breakdownEl.innerHTML = steps.map(s => `
                 <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <div class="font-bold text-slate-800 text-xs sm:text-sm mb-1.5 text-indigo-950">${s.title}</div>
+                    <div class="font-bold text-slate-800 text-xs sm:text-sm mb-1.5 text-indigo-950">${renderMathTags(s.title)}</div>
                     <div class="text-xs sm:text-[13px] text-slate-600 leading-relaxed">${renderMathTags(s.content)}</div>
                 </div>
             `).join('');
